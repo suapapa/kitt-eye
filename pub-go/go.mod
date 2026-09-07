@@ -1,6 +1,6 @@
 module github.com/suapapa/kitt-eye/pub
 
-go 1.25.0
+go 1.27.0
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.1
@@ -9,6 +9,6 @@ require (
 
 require (
 	github.com/gorilla/websocket v1.5.3 // indirect
-	golang.org/x/net v0.54.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 )
