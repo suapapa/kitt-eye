@@ -1,17 +1,34 @@
 # kitt-eye configuration example
 mqtt:
   broker: "homeassistant.local"  # Home Assistant or Mosquitto broker IP/host
+                                 # (leave empty -> dry-run mode: state to stdout)
   port: 1883
   client_id: "kitt-eye-pub"
-  username: "mqtt_user"          # MQTT credentials configured in Home Assistant
-  password: "mqtt_password"
+  username: "mqtt_user"              # MQTT credentials configured in Home Assistant
+  password: ""                       # prefer env KITTEYE_MQTT_PASSWORD over storing here
   topic_prefix: "kitt-eye"
   keep_alive_seconds: 60
 
 ipc:
   socket_path: "/tmp/kitt-eye.sock"
 
+# State TTLs (seconds). done/error expire back to idle; active states with no
+# hook events expire to idle (crash safety net); idle sessions are removed.
+state:
+  done_ttl_seconds: 15
+  error_ttl_seconds: 60
+  stale_ttl_seconds: 300
+  session_ttl_seconds: 3600
+  max_sessions_per_agent: 8
+
+homeassistant:
+  discovery: false  # true -> register MQTT Discovery sensors under homeassistant/
+
 agents:
+  - name: "claude"
+    enabled: true
+    detail: "minimal"   # minimal: tool names/files only | full: prompt/response excerpts (hook-side)
+    max_sessions: 8
   - name: "antigravity-cli"
     enabled: true
   - name: "codex"
