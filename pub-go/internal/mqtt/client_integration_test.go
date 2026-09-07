@@ -47,11 +47,11 @@ func TestLiveBrokerSmoke(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{"status online", func() error { return client.PublishStatus(true) }},
-		{"agent", func() error { return client.PublishAgent(snap) }},
-		{"active", func() error { return client.PublishActive("smoke", model.StateThinking) }},
-		{"discovery", func() error { return client.PublishDiscovery([]string{"smoke"}) }},
-		{"status offline", func() error { return client.PublishStatus(false) }},
+		{name: "status online", fn: func() error { return client.PublishStatus(true) }},
+		{name: "agent", fn: func() error { return client.PublishAgent(snap) }},
+		{name: "active", fn: func() error { return client.PublishActive("smoke", model.StateThinking) }},
+		{name: "discovery", fn: func() error { return client.PublishDiscovery([]string{"smoke"}) }},
+		{name: "status offline", fn: func() error { return client.PublishStatus(false) }},
 	} {
 		if err := step.fn(); err != nil {
 			t.Errorf("%s: %v", step.name, err)

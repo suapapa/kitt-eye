@@ -1,4 +1,4 @@
-.PHONY: help build-pub run-pub build-mcu flash-mcu \
+.PHONY: help build-pub run-pub build-sub run-sub build-mcu flash-mcu \
 	install-hooks uninstall-hooks \
 	install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli \
 	test clean
@@ -7,6 +7,8 @@ HELP_MSG = "Usage: make [target]\n\n\
 Targets:\n\
   build-pub                 Build Go publisher daemon\n\
   run-pub                   Run Go publisher daemon locally\n\
+  build-sub                 Build Go MQTT subscriber example (cmd/kitteye_sub_example)\n\
+  run-sub                   Run MQTT subscriber example (shares config.yaml)\n\
   build-mcu                 Build ESP32-C3 Rust firmware\n\
   flash-mcu                 Flash ESP32-C3 firmware via cargo espflash\n\
   install-hooks             Install hooks for all CLIs (requires jq)\n\
@@ -30,6 +32,14 @@ build-pub:
 run-pub: build-pub
 	@echo "==> Starting Go publisher daemon..."
 	./pub-go/bin/kitt-eye-pub --config config.yaml
+
+build-sub:
+	@echo "==> Building Go MQTT subscriber example..."
+	cd pub-go && go build -o bin/kitt-eye-sub ./cmd/kitteye_sub_example
+
+run-sub: build-sub
+	@echo "==> Starting Go MQTT subscriber example..."
+	./pub-go/bin/kitt-eye-sub --config config.yaml
 
 build-mcu:
 	@echo "==> Building ESP32-C3 Rust firmware..."

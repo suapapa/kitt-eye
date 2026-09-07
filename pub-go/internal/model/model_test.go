@@ -22,7 +22,9 @@ func TestStatePriorityOrder(t *testing.T) {
 }
 
 func TestParseEventV1DefaultsSession(t *testing.T) {
-	ev, err := ParseEvent([]byte(`{"agent":"cursor-cli","state":"executing_tool","detail":"Running git diff","timestamp":"2026-09-07T11:26:00Z"}`))
+	ev, err := ParseEvent([]byte(
+		`{"agent":"cursor-cli","state":"executing_tool","detail":"Running git diff","timestamp":"2026-09-07T11:26:00Z"}`,
+	))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,13 +48,14 @@ func TestParseEventV1SessionAndEvent(t *testing.T) {
 
 func TestParseEventRejects(t *testing.T) {
 	for _, tc := range []struct {
-		name, line string
+		name string
+		line string
 	}{
-		{"not json", `{"agent":`},
-		{"topic injection in agent", `{"agent":"a/b","state":"idle"}`},
-		{"empty agent", `{"agent":"","state":"idle"}`},
-		{"unknown state", `{"agent":"claude","state":"sleeping"}`},
-		{"bad session chars", `{"agent":"claude","state":"idle","session_id":"weird/../id"}`},
+		{name: "not json", line: `{"agent":`},
+		{name: "topic injection in agent", line: `{"agent":"a/b","state":"idle"}`},
+		{name: "empty agent", line: `{"agent":"","state":"idle"}`},
+		{name: "unknown state", line: `{"agent":"claude","state":"sleeping"}`},
+		{name: "bad session chars", line: `{"agent":"claude","state":"idle","session_id":"weird/../id"}`},
 	} {
 		if _, err := ParseEvent([]byte(tc.line)); err == nil {
 			t.Errorf("%s: expected error, got nil", tc.name)

@@ -22,16 +22,22 @@ func TestLoadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.MQTT.Port != 1883 || cfg.MQTT.ClientID != "kitt-eye-pub" ||
-		cfg.MQTT.TopicPrefix != "kitt-eye" || cfg.MQTT.KeepAliveSeconds != 60 {
+	mqttDefaultsOK := cfg.MQTT.Port == 1883 &&
+		cfg.MQTT.ClientID == "kitt-eye-pub" &&
+		cfg.MQTT.TopicPrefix == "kitt-eye" &&
+		cfg.MQTT.KeepAliveSeconds == 60
+	if !mqttDefaultsOK {
 		t.Errorf("mqtt defaults wrong: %+v", cfg.MQTT)
 	}
 	if cfg.IPC.SocketPath != "/tmp/kitt-eye.sock" {
 		t.Errorf("socket default = %q", cfg.IPC.SocketPath)
 	}
-	if cfg.State.DoneTTLSeconds != 15 || cfg.State.ErrorTTLSeconds != 60 ||
-		cfg.State.StaleTTLSeconds != 300 || cfg.State.SessionTTLSeconds != 3600 ||
-		cfg.State.MaxSessionsPerAgent != 8 {
+	stateDefaultsOK := cfg.State.DoneTTLSeconds == 15 &&
+		cfg.State.ErrorTTLSeconds == 60 &&
+		cfg.State.StaleTTLSeconds == 300 &&
+		cfg.State.SessionTTLSeconds == 3600 &&
+		cfg.State.MaxSessionsPerAgent == 8
+	if !stateDefaultsOK {
 		t.Errorf("state defaults wrong: %+v", cfg.State)
 	}
 }

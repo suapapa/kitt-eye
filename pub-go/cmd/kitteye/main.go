@@ -8,8 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -124,7 +126,6 @@ func run() error {
 	}
 	stop() // unblocks Serve and the janitor
 	<-workerDone
-	srv.Close()
 	return nil
 }
 
@@ -153,7 +154,7 @@ func buildSinks(cfg *config.Config, signalChange func(), log *slog.Logger) ([]pu
 	connectCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := cli.Connect(connectCtx); err != nil {
-		return nil, nil, fmt.Errorf("connect %s: %w", cfg.MQTT.Broker, err)
+		return nil, nil, fmt.Errorf("connect %q: %w", cfg.MQTT.Broker, err)
 	}
 	if err := cli.PublishStatus(true); err != nil {
 		log.Warn("publish online status failed", "err", err)
@@ -190,7 +191,7 @@ func brokerLabel(cfg *config.Config) string {
 	if cfg.MQTT.Broker == "" {
 		return "dry-run(stdout)"
 	}
-	return fmt.Sprintf("%s:%d", cfg.MQTT.Broker, cfg.MQTT.Port)
+	return net.JoinHostPort(cfg.MQTT.Broker, strconv.Itoa(cfg.MQTT.Port))
 }
 
 // defaultConfigPath resolves the config file: $KITTEYE_CONFIG, else ./config.yaml.

@@ -38,12 +38,14 @@ func TestStdoutSinkEmitsTaggedLines(t *testing.T) {
 	}
 	wantTypes := []string{"agent", "active", "status", "status"}
 	for i, line := range lines {
-		var rec map[string]any
+		var rec struct {
+			Type string `json:"type"`
+		}
 		if err := json.Unmarshal([]byte(line), &rec); err != nil {
 			t.Fatalf("line %d not JSON: %v", i, err)
 		}
-		if rec["type"] != wantTypes[i] {
-			t.Errorf("line %d type = %v, want %q", i, rec["type"], wantTypes[i])
+		if rec.Type != wantTypes[i] {
+			t.Errorf("line %d type = %q, want %q", i, rec.Type, wantTypes[i])
 		}
 	}
 }

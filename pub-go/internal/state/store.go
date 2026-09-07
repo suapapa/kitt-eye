@@ -44,6 +44,9 @@ func (c Config) withDefaults() Config {
 	if c.MaxSessionsPerAgent <= 0 {
 		c.MaxSessionsPerAgent = 8
 	}
+	if c.PerAgentMax == nil {
+		c.PerAgentMax = map[string]int{}
+	}
 	return c
 }
 
@@ -81,7 +84,12 @@ type Store struct {
 
 // New returns an empty Store.
 func New(cfg Config) *Store {
-	return &Store{cfg: cfg.withDefaults(), now: time.Now, agents: make(map[string]map[string]Session)}
+	return &Store{
+		cfg:         cfg.withDefaults(),
+		now:         time.Now,
+		agents:      make(map[string]map[string]Session),
+		subscribers: []func(){},
+	}
 }
 
 // SetClock replaces the time source (test seam for TTL behavior).
@@ -114,37 +122,12 @@ func (s *Store) Apply(ev model.Event) {
 	s.notify()
 }
 
-func (s *Store) maxFor(agent string) int {
-	if n, ok := s.cfg.PerAgentMax[agent]; ok && n > 0 {
-		return n
-	}
-	return s.cfg.MaxSessionsPerAgent
-}
-
-// evictOldestWorth removes the least significant session: lowest priority
-// first, then oldest update.
-func (s *Store) evictOldestWorth(sessions map[string]Session) {
-	var victimID string
-	var victim Session
-	for id, sess := range sessions {
-		worse := victimID == "" ||
-			sess.State.Priority() < victim.State.Priority() ||
-			(sess.State.Priority() == victim.State.Priority() && sess.UpdatedAt.Before(victim.UpdatedAt))
-		if worse {
-			victimID, victim = id, sess
-		}
-	}
-	if victimID != "" {
-		delete(sessions, victimID)
-	}
-}
-
 // Expire applies the TTL table (§5 of pub-go/PLAN.md) once. Run periodically
 // via RunJanitor; exported so tests drive it directly with a fake clock.
 func (s *Store) Expire() {
 	s.mu.Lock()
 	now := s.now()
-	changed := false
+	var changed bool
 	for agent, sessions := range s.agents {
 		for id, sess := range sessions {
 			age := now.Sub(sess.UpdatedAt)
@@ -215,24 +198,29 @@ func (s *Store) Snapshot() []AgentSnapshot {
 // ActiveState returns the globally dominant agent and state, or ("", idle)
 // when nothing is tracked.
 func (s *Store) ActiveState() (string, model.State) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var agent string
-	var st model.State = model.StateIdle
+	st := model.StateIdle
 	var updated time.Time
-	for _, snap := range s.Snapshot() {
+	for name, sessions := range s.agents {
+		snap := aggregate(name, sessions)
 		better := snap.State.Priority() > st.Priority() ||
 			(snap.State.Priority() == st.Priority() && snap.UpdatedAt.After(updated))
 		if better && snap.State != model.StateIdle {
 			agent, st, updated = snap.Agent, snap.State, snap.UpdatedAt
 		}
 	}
-	if agent == "" {
-		return "", model.StateIdle
-	}
 	return agent, st
 }
 
 func aggregate(agent string, sessions map[string]Session) AgentSnapshot {
-	snap := AgentSnapshot{Agent: agent, State: model.StateIdle, Sessions: make([]Session, 0, len(sessions))}
+	snap := AgentSnapshot{
+		Agent:    agent,
+		State:    model.StateIdle,
+		Sessions: make([]Session, 0, len(sessions)),
+	}
 	for _, sess := range sessions {
 		snap.Sessions = append(snap.Sessions, sess)
 		better := sess.State.Priority() > snap.State.Priority() ||
@@ -252,6 +240,31 @@ func aggregate(agent string, sessions map[string]Session) AgentSnapshot {
 		return a.SessionID < b.SessionID
 	})
 	return snap
+}
+
+func (s *Store) maxFor(agent string) int {
+	if n, ok := s.cfg.PerAgentMax[agent]; ok && n > 0 {
+		return n
+	}
+	return s.cfg.MaxSessionsPerAgent
+}
+
+// evictOldestWorth removes the least significant session: lowest priority
+// first, then oldest update.
+func (s *Store) evictOldestWorth(sessions map[string]Session) {
+	var victimID string
+	var victim Session
+	for id, sess := range sessions {
+		worse := victimID == "" ||
+			sess.State.Priority() < victim.State.Priority() ||
+			(sess.State.Priority() == victim.State.Priority() && sess.UpdatedAt.Before(victim.UpdatedAt))
+		if worse {
+			victimID, victim = id, sess
+		}
+	}
+	if victimID != "" {
+		delete(sessions, victimID)
+	}
 }
 
 func (s *Store) notify() {

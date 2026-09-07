@@ -41,7 +41,7 @@ type Server struct {
 func New(path string, h Handler, log *slog.Logger) (*Server, error) {
 	if conn, err := net.Dial("unix", path); err == nil {
 		_ = conn.Close()
-		return nil, fmt.Errorf("%s is already served by a running kitt-eye publisher", path)
+		return nil, fmt.Errorf("%q is already served by a running kitt-eye publisher", path)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, fmt.Errorf("create socket dir: %w", err)
@@ -51,7 +51,7 @@ func New(path string, h Handler, log *slog.Logger) (*Server, error) {
 	}
 	ln, err := net.Listen("unix", path)
 	if err != nil {
-		return nil, fmt.Errorf("listen %s: %w", path, err)
+		return nil, fmt.Errorf("listen %q: %w", path, err)
 	}
 	return &Server{path: path, ln: ln, h: h, log: log}, nil
 }
@@ -85,7 +85,8 @@ func (s *Server) handle(ctx context.Context, conn net.Conn) {
 	// ReadBytes returns any data read even on timeout/EOF-without-newline;
 	// `nc -U` hooks commonly omit the trailing newline, so data wins over err.
 	if len(bytes.TrimSpace(line)) == 0 {
-		if err != nil && !errors.Is(err, io.EOF) && !os.IsTimeout(err) {
+		unexpectedReadErr := err != nil && !errors.Is(err, io.EOF) && !os.IsTimeout(err)
+		if unexpectedReadErr {
 			s.log.Debug("ipc: read failed", "err", err)
 		}
 		return

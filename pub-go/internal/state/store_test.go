@@ -17,7 +17,7 @@ func newTestStore(t *testing.T, cfg Config) (*Store, *fakeClock, *int) {
 	clock := &fakeClock{t: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
 	s := New(cfg)
 	s.SetClock(clock.Now)
-	changes := 0
+	var changes int
 	s.Subscribe(func() { changes++ })
 	return s, clock, &changes
 }
@@ -128,7 +128,7 @@ func TestEventsKeepSessionAlive(t *testing.T) {
 	cfg := Config{StaleTTL: 10 * time.Second}
 	s, clock, _ := newTestStore(t, cfg)
 	s.Apply(event("claude", "busy", model.StateThinking))
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		clock.Advance(9 * time.Second)
 		s.Expire()
 		s.Apply(event("claude", "busy", model.StateThinking)) // heartbeat

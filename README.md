@@ -71,6 +71,7 @@ kitt-eye/
 │   └── antigravity-cli/      # Antigravity (agy): hook.sh + named-bundle 스니펫
 ├── pub-go/                   # Go Publisher 데몬  (module github.com/suapapa/kitt-eye/pub)
 │   ├── cmd/kitteye/          # 진입점
+│   ├── cmd/kitteye_sub_example/  # MQTT 구독 예제 (`mosquitto_sub` 대체, 동일 config.yaml)
 │   └── internal/
 │       ├── config/           # YAML 설정 로더 (기본값/검증/env 오버라이드)
 │       ├── ipc/              # Unix Domain Socket 서버 (훅 이벤트 수신)
@@ -87,6 +88,7 @@ kitt-eye/
 | 컴포넌트 | 상태 |
 |---|---|
 | Go Publisher (`pub-go`) | ✅ 구현 완료 — IPC 수신, 세션/TTL 상태 집계, MQTT retained 발행, LWT, HA Discovery, dry-run 모드 (단위 테스트 + 선택적 실브로커 스모크 테스트) |
+| MQTT Sub 예제 (`pub-go/cmd/kitteye_sub_example`) | ✅ 퍼블리셔와 동일 `config.yaml`로 `kitt-eye/#` retained 토픽 관찰 (`make run-sub`) |
 | 설정 / Makefile | ✅ `config.example.yaml` + `make` 타깃 (`install-hooks-*` 포함) |
 | 공통 훅 전송기 (`hooks/common/send_event.sh`) | ✅ v1.1 — `session_id`/`event`, `jq`로 JSON 이스케이프, stdout 무출력 |
 | CLI별 훅 스크립트 (`hooks/{claude,codex,cursor-cli,antigravity-cli}/`) | ✅ bash+jq 관찰자 훅 + 스니펫 + `make install-hooks` 멱등 병합 |
@@ -148,6 +150,8 @@ make run-pub
 발행되는 주제를 관찰해 확인합니다:
 
 ```sh
+make run-sub
+# 또는
 mosquitto_sub -h homeassistant.local -v -t 'kitt-eye/#'
 ```
 
@@ -261,6 +265,8 @@ v1.1 확장(선택 필드, 멀티 세션용): `session_id`, `event` 추가.
 make help                       # 대상 목록
 make build-pub                  # Go Publisher 빌드 → pub-go/bin/kitt-eye-pub
 make run-pub                    # 빌드 후 config.yaml로 실행
+make build-sub                  # MQTT subscriber 예제 → pub-go/bin/kitt-eye-sub
+make run-sub                    # 동일 config.yaml로 kitt-eye/# 구독
 make build-mcu                  # ESP32-C3 펌웨어 빌드 (구현 예정)
 make flash-mcu                  # espflash로 플래시 + 모니터링 (구현 예정)
 make install-hooks              # 4 CLI 훅 설치 (jq 필수)

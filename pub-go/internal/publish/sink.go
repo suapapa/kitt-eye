@@ -30,11 +30,6 @@ type Stdout struct {
 
 var _ Sink = (*Stdout)(nil)
 
-// NewStdout returns a Sink writing JSON lines to w.
-func NewStdout(w io.Writer) *Stdout {
-	return &Stdout{enc: json.NewEncoder(w)}
-}
-
 type agentRecord struct {
 	Type     string              `json:"type"`
 	Snapshot state.AgentSnapshot `json:"snapshot"`
@@ -49,6 +44,11 @@ type activeRecord struct {
 type statusRecord struct {
 	Type   string `json:"type"`
 	Status string `json:"status"`
+}
+
+// NewStdout returns a Sink writing JSON lines to w.
+func NewStdout(w io.Writer) *Stdout {
+	return &Stdout{enc: json.NewEncoder(w)}
 }
 
 func (s *Stdout) PublishAgent(snap state.AgentSnapshot) error {

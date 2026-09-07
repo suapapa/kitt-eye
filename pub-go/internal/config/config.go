@@ -3,12 +3,12 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -65,10 +65,10 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 	var cfg Config
-	dec := yaml.NewDecoder(strings.NewReader(string(data)))
+	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true) // reject typos instead of silently ignoring them
 	if err := dec.Decode(&cfg); err != nil {
-		return nil, fmt.Errorf("parse config %s: %w", path, err)
+		return nil, fmt.Errorf("parse config %q: %w", path, err)
 	}
 	if env := os.Getenv("KITTEYE_MQTT_BROKER"); env != "" && cfg.MQTT.Broker == "" {
 		cfg.MQTT.Broker = env
@@ -78,7 +78,7 @@ func Load(path string) (*Config, error) {
 	}
 	cfg.applyDefaults()
 	if err := cfg.validate(); err != nil {
-		return nil, fmt.Errorf("invalid config %s: %w", path, err)
+		return nil, fmt.Errorf("invalid config %q: %w", path, err)
 	}
 	return &cfg, nil
 }
@@ -119,14 +119,15 @@ func (c *Config) applyDefaults() {
 var topicPrefixRe = regexp.MustCompile(`^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*$`)
 
 func (c *Config) validate() error {
-	var errs []error
+	errs := []error{}
 	if !filepath.IsAbs(c.IPC.SocketPath) {
 		errs = append(errs, fmt.Errorf("ipc.socket_path must be absolute, got %q", c.IPC.SocketPath))
 	}
 	if !topicPrefixRe.MatchString(c.MQTT.TopicPrefix) {
 		errs = append(errs, fmt.Errorf("mqtt.topic_prefix %q must be '/'-joined [A-Za-z0-9_-] segments", c.MQTT.TopicPrefix))
 	}
-	if c.MQTT.Broker != "" && (c.MQTT.Port < 1 || c.MQTT.Port > 65535) {
+	portOutOfRange := c.MQTT.Port < 1 || c.MQTT.Port > 65535
+	if c.MQTT.Broker != "" && portOutOfRange {
 		errs = append(errs, fmt.Errorf("mqtt.port %d out of range", c.MQTT.Port))
 	}
 	if c.MQTT.KeepAliveSeconds < 5 {
@@ -137,8 +138,10 @@ func (c *Config) validate() error {
 		if !model.ValidAgent(a.Name) {
 			errs = append(errs, fmt.Errorf("agents[].name %q is not topic-safe [A-Za-z0-9][A-Za-z0-9_-]{0,31}", a.Name))
 		}
-		if a.Detail != "" && a.Detail != "minimal" && a.Detail != "full" {
-			errs = append(errs, fmt.Errorf("agents[%s].detail %q must be minimal or full", a.Name, a.Detail))
+		switch a.Detail {
+		case "", "minimal", "full":
+		default:
+			errs = append(errs, fmt.Errorf("agents[%q].detail %q must be minimal or full", a.Name, a.Detail))
 		}
 		if seen[a.Name] {
 			errs = append(errs, fmt.Errorf("duplicate agent %q", a.Name))
@@ -175,7 +178,7 @@ func (c *Config) PerAgentMax() map[string]int {
 
 // AgentNames lists configured agent names (for HA discovery).
 func (c *Config) AgentNames() []string {
-	out := make([]string, 0, len(c.Agents))
+	out := []string{}
 	for _, a := range c.Agents {
 		if a.Enabled {
 			out = append(out, a.Name)

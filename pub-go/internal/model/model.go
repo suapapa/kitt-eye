@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // State is a normalized agent state.
@@ -92,10 +93,11 @@ func ParseEvent(data []byte) (Event, error) {
 	if !ev.State.Valid() {
 		return Event{}, fmt.Errorf("unknown state %q", ev.State)
 	}
+	if ev.SessionID != "" && !sessionRe.MatchString(ev.SessionID) {
+		return Event{}, fmt.Errorf("invalid session_id %q", ev.SessionID)
+	}
 	if ev.SessionID == "" {
 		ev.SessionID = DefaultSession
-	} else if !sessionRe.MatchString(ev.SessionID) {
-		return Event{}, fmt.Errorf("invalid session_id %q", ev.SessionID)
 	}
 	ev.Detail = sanitizeDetail(ev.Detail)
 	if ev.EventName != "" && !agentRe.MatchString(ev.EventName) {
@@ -112,7 +114,8 @@ func ParseEvent(data []byte) (Event, error) {
 // rune boundary.
 func sanitizeDetail(s string) string {
 	s = strings.Map(func(r rune) rune {
-		if r < 0x20 || r == '"' || r == 0x7f {
+		needsReplace := r < 0x20 || r == '"' || r == 0x7f
+		if needsReplace {
 			return ' '
 		}
 		return r
@@ -120,12 +123,10 @@ func sanitizeDetail(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) > MaxDetailLen {
 		cut := MaxDetailLen
-		for cut > 0 && !utf8Start(s[cut]) {
+		for cut > 0 && !utf8.RuneStart(s[cut]) {
 			cut--
 		}
 		s = s[:cut]
 	}
 	return s
 }
-
-func utf8Start(b byte) bool { return b&0xC0 != 0x80 }

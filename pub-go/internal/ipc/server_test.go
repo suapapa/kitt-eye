@@ -82,11 +82,15 @@ func TestDeliversDatagrams(t *testing.T) {
 	send(t, srv.Path(), `{"agent":"claude","state":"idle"}`+"\n")
 	send(t, srv.Path(), `{"agent":"codex","state":"thinking"}`) // no trailing newline (nc -U style)
 
-	if got := recv(t, events); got != `{"agent":"claude","state":"idle"}` {
-		t.Errorf("event 1 = %q", got)
+	// Per-connection handlers run concurrently, so arrival order is not guaranteed.
+	got := map[string]bool{
+		recv(t, events): true,
+		recv(t, events): true,
 	}
-	if got := recv(t, events); got != `{"agent":"codex","state":"thinking"}` {
-		t.Errorf("event 2 = %q", got)
+	want1 := `{"agent":"claude","state":"idle"}`
+	want2 := `{"agent":"codex","state":"thinking"}`
+	if !got[want1] || !got[want2] {
+		t.Errorf("got %v, want both %q and %q", got, want1, want2)
 	}
 }
 

@@ -1,0 +1,32 @@
+# Agent skills / Cursor tooling
+.agents/
+skills-lock.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local secrets / env
+.env
+.env.*
+!.env.example
+
+# Go
+**/bin/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Rust
+**/target/
+
+# Local runtime config (keep example committed)
+/config.yaml

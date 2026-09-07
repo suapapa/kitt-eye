@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +48,23 @@ type Client struct {
 	log    *slog.Logger
 }
 
+type haSensorConfig struct {
+	Name                string `json:"name"`
+	UniqueID            string `json:"unique_id"`
+	StateTopic          string `json:"state_topic"`
+	AvailabilityTopic   string `json:"availability_topic"`
+	PayloadAvailable    string `json:"payload_available"`
+	PayloadNotAvailable string `json:"payload_not_available"`
+	Icon                string `json:"icon"`
+}
+
+type discoverySensor struct {
+	id    string
+	name  string
+	topic string
+	icon  string
+}
+
 // New builds the paho client. It does not connect; call Connect.
 func New(o Options) (*Client, error) {
 	if o.Logger == nil {
@@ -69,7 +88,7 @@ func New(o Options) (*Client, error) {
 		if port == 0 {
 			port = 1883
 		}
-		u.Host = fmt.Sprintf("%s:%d", u.Host, port)
+		u.Host = net.JoinHostPort(u.Hostname(), strconv.Itoa(port))
 	}
 
 	co := paho.NewClientOptions().AddBroker(u.String())
@@ -119,14 +138,6 @@ func (c *Client) Connect(ctx context.Context) error {
 	return tok.Error()
 }
 
-func (c *Client) publish(topic, payload string, retain bool) error {
-	tok := c.cli.Publish(topic, qosState, retain, payload)
-	if !tok.WaitTimeout(publishWait) {
-		return fmt.Errorf("publish %s: timed out", topic)
-	}
-	return tok.Error()
-}
-
 // PublishAgent writes the agent aggregate plus its session array.
 func (c *Client) PublishAgent(snap state.AgentSnapshot) error {
 	base := c.prefix + "/agents/" + snap.Agent
@@ -163,29 +174,38 @@ func (c *Client) PublishStatus(online bool) error {
 
 // PublishDiscovery registers HA MQTT Discovery sensors (opt-in).
 func (c *Client) PublishDiscovery(agents []string) error {
-	sensors := []struct{ id, name, topic, icon string }{
-		{"active_state", "KITT Eye Active State", c.prefix + "/active_state", "mdi:robot"},
+	sensors := []discoverySensor{
+		{
+			id:    "active_state",
+			name:  "KITT Eye Active State",
+			topic: c.prefix + "/active_state",
+			icon:  "mdi:robot",
+		},
 	}
 	for _, a := range agents {
-		sensors = append(sensors, struct{ id, name, topic, icon string }{
-			"agent_" + a, "KITT Eye " + a, c.prefix + "/agents/" + a + "/state", "mdi:console",
+		sensors = append(sensors, discoverySensor{
+			id:    "agent_" + a,
+			name:  "KITT Eye " + a,
+			topic: c.prefix + "/agents/" + a + "/state",
+			icon:  "mdi:console",
 		})
 	}
 	for _, s := range sensors {
-		cfg := map[string]any{
-			"name":                  s.name,
-			"unique_id":             "kitt_eye_" + s.id,
-			"state_topic":           s.topic,
-			"availability_topic":    c.prefix + "/system/status",
-			"payload_available":     "online",
-			"payload_not_available": "offline",
-			"icon":                  s.icon,
+		cfg := haSensorConfig{
+			Name:                s.name,
+			UniqueID:            "kitt_eye_" + s.id,
+			StateTopic:          s.topic,
+			AvailabilityTopic:   c.prefix + "/system/status",
+			PayloadAvailable:    "online",
+			PayloadNotAvailable: "offline",
+			Icon:                s.icon,
 		}
 		payload, err := json.Marshal(cfg)
 		if err != nil {
 			return err
 		}
-		if err := c.publish("homeassistant/sensor/kitt_eye_"+s.id+"/config", string(payload), true); err != nil {
+		topic := "homeassistant/sensor/kitt_eye_" + s.id + "/config"
+		if err := c.publish(topic, string(payload), true); err != nil {
 			return err
 		}
 	}
@@ -196,4 +216,12 @@ func (c *Client) PublishDiscovery(agents []string) error {
 // closes the connection.
 func (c *Client) Disconnect(grace time.Duration) {
 	c.cli.Disconnect(uint(grace.Milliseconds()))
+}
+
+func (c *Client) publish(topic, payload string, retain bool) error {
+	tok := c.cli.Publish(topic, qosState, retain, payload)
+	if !tok.WaitTimeout(publishWait) {
+		return fmt.Errorf("publish %q: timed out", topic)
+	}
+	return tok.Error()
 }
