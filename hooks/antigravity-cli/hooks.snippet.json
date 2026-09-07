@@ -1,0 +1,38 @@
+{
+  "kitt-eye": {
+    "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-agy-hook PreInvocation",
+        "timeout": 2
+      }
+    ],
+    "PostInvocation": [
+      {
+        "type": "command",
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-agy-hook PostInvocation",
+        "timeout": 2
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.kitt-eye/bin/kitt-eye-agy-hook PostToolUse",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-agy-hook Stop",
+        "timeout": 2
+      }
+    ]
+  }
+}

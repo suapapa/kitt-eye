@@ -62,7 +62,13 @@ kitt-eye/
 ├── config.example.yaml       # Publisher 설정 템플릿
 ├── PLAN.md                   # 상세 설계: 훅 매핑 규격, MQTT 프로토콜, 로드맵
 ├── hooks/
-│   └── common/send_event.sh  # UDS로 이벤트를 보내는 공통 유틸리티
+│   ├── common/
+│   │   ├── send_event.sh     # UDS 전송기 (v1.1: session_id/event, jq JSON 인코딩)
+│   │   └── merge_hooks.sh    # CLI 설정 JSON 멱등 병합/제거 (jq 필수)
+│   ├── claude/               # Claude Code: hook.sh + settings.snippet.json
+│   ├── codex/                # Codex: hook.sh + hooks.snippet.json
+│   ├── cursor-cli/           # Cursor CLI: hook.sh + hooks.snippet.json
+│   └── antigravity-cli/      # Antigravity (agy): hook.sh + named-bundle 스니펫
 ├── pub-go/                   # Go Publisher 데몬  (module github.com/suapapa/kitt-eye/pub)
 │   ├── cmd/kitteye/          # 진입점
 │   └── internal/
@@ -81,9 +87,9 @@ kitt-eye/
 | 컴포넌트 | 상태 |
 |---|---|
 | Go Publisher (`pub-go`) | ✅ 구현 완료 — IPC 수신, 세션/TTL 상태 집계, MQTT retained 발행, LWT, HA Discovery, dry-run 모드 (단위 테스트 + 선택적 실브로커 스모크 테스트) |
-| 설정 / Makefile | ✅ `config.example.yaml` + `make` 타깃 |
-| 공통 훅 전송기 (`hooks/common/send_event.sh`) | ✅ UDS로 이벤트 전송 (임의 CLI 수동 테스트 가능) |
-| CLI별 훅 스크립트 (`hooks/{claude,codex,cursor-cli,antigravity-cli}/`) | 🚧 미구현 — 규격은 `PLAN.md` §4.4–4.7에 확정 |
+| 설정 / Makefile | ✅ `config.example.yaml` + `make` 타깃 (`install-hooks-*` 포함) |
+| 공통 훅 전송기 (`hooks/common/send_event.sh`) | ✅ v1.1 — `session_id`/`event`, `jq`로 JSON 이스케이프, stdout 무출력 |
+| CLI별 훅 스크립트 (`hooks/{claude,codex,cursor-cli,antigravity-cli}/`) | ✅ bash+jq 관찰자 훅 + 스니펫 + `make install-hooks` 멱등 병합 |
 | ESP32-C3 펌웨어 (`mcu-rust`) | 🚧 매니페스트(`Cargo.toml`)만 존재, `src/` 없음 — 현재 빌드 불가 |
 | Home Assistant 연동 | ✅ 퍼블리셔 측 MQTT Discovery 발행 지원 (`homeassistant.discovery: true`) |
 
@@ -92,8 +98,9 @@ kitt-eye/
 ### 요구 사항
 
 - Go 1.25+
+- **`jq`** — CLI 훅 파싱·설치(`make install-hooks`)·`send_event.sh` JSON 인코딩에 **필수**. macOS: `brew install jq` / Debian·Ubuntu: `apt install jq`
+- `nc` (Unix domain socket 지원, macOS 기본 포함) — 훅 → 데몬 IPC 전송
 - (MQTT 모드만) Mosquitto 등 MQTT 브로커 — Home Assistant의 Mosquitto 애드온 권장
-- 훅 전송 테스트에는 `nc`(Unix socket 지원, macOS 기본 포함) 필요
 
 ### 1) 브로커 없이 dry-run으로 시작하기
 
@@ -146,24 +153,41 @@ mosquitto_sub -h homeassistant.local -v -t 'kitt-eye/#'
 
 ### 3) CLI 훅 연동
 
-각 CLI는 자체 훅 설정 파일(JSON)에 kitt-eye 훅을 병합하는 방식으로 등록합니다. 현재 **공통 전송기만 설치**됩니다:
+`jq`가 PATH에 있어야 합니다. Publisher 데몬을 띄운 뒤 훅을 설치합니다:
 
 ```sh
-make install-hooks     # ~/.kitt-eye/bin/kitt-eye-send 설치
+make install-hooks              # 4 CLI 전부 (멱등 병합 + 백업)
+# 또는 개별:
+make install-hooks-claude
+make install-hooks-codex
+make install-hooks-cursor-cli
+make install-hooks-antigravity-cli
 ```
+
+설치 내용:
+- `~/.kitt-eye/bin/kitt-eye-send` + CLI별 `kitt-eye-*-hook`
+- 각 CLI 설정 JSON에 스니펫 병합 (기존 사용자 훅 유지, kitt-eye 항목만 교체)
+
+수동 전송 테스트:
 
 ```sh
-~/.kitt-eye/bin/kitt-eye-send claude thinking "analyzing prompt"
+~/.kitt-eye/bin/kitt-eye-send claude thinking "analyzing prompt" sess1 UserPromptSubmit
 ```
 
-CLI별 `hook.sh`(훅 JSON stdin → kitt-eye 이벤트 변환)와 `settings.json`/`hooks.json` 병합 스니펫, `jq` 기반 멱등 설치는 `PLAN.md` §4.4–4.7 규격대로 단계적으로 제공됩니다. 설정 파일 위치 요약:
-
-| CLI | 설정 위치 | 비고 |
+| CLI | 설정 위치 | 설치 후 확인 |
 |---|---|---|
-| `claude` | `~/.claude/settings.json` | 12개 훅 이벤트 매핑 |
-| `codex` | `~/.codex/hooks.json` | 훅 해시 기반 trust — 설치/갱신마다 `/hooks` 재승인 필요 |
-| `cursor-cli` | `~/.cursor/hooks.json` (프로젝트 `.cursor/hooks.json` 가능) | file watcher가 즉시 반영 |
-| `antigravity-cli` | `hooks.json` named bundle | trustedWorkspaces trust 확인 |
+| `claude` | `~/.claude/settings.json` | `/hooks` 메뉴 · workspace trust |
+| `codex` | `~/.codex/hooks.json` | **`/hooks`에서 kitt-eye 승인 필수** (커맨드 해시 trust — 재설치마다 재승인) |
+| `cursor-cli` | `~/.cursor/hooks.json` | file watcher 즉시 반영 (IDE와 설정 공유) |
+| `antigravity-cli` | `~/.gemini/config/hooks.json` (`kitt-eye` bundle) | **trustedWorkspaces** 승인 |
+
+제거 (kitt-eye 항목만 선별 삭제, 다른 훅 유지):
+
+```sh
+make uninstall-hooks
+```
+
+이벤트 매핑·stdout 계약 상세는 [PLAN.md](./PLAN.md) §4.4–4.7.
 
 ### 4) ESP32-C3 펌웨어 (예정)
 
@@ -234,15 +258,16 @@ v1.1 확장(선택 필드, 멀티 세션용): `session_id`, `event` 추가.
 ## Makefile
 
 ```sh
-make help              # 대상 목록
-make build-pub         # Go Publisher 빌드 → pub-go/bin/kitt-eye-pub
-make run-pub           # 빌드 후 config.yaml로 실행
-make build-mcu         # ESP32-C3 펌웨어 빌드 (구현 예정)
-make flash-mcu         # espflash로 플래시 + 모니터링 (구현 예정)
-make install-hooks     # 공통 전송기를 ~/.kitt-eye/bin/kitt-eye-send로 설치
-make uninstall-hooks   # ~/.kitt-eye 제거
-make test              # go test ./... + cargo test (Rust는 아직 no-op)
-make clean             # 산출물 제거
+make help                       # 대상 목록
+make build-pub                  # Go Publisher 빌드 → pub-go/bin/kitt-eye-pub
+make run-pub                    # 빌드 후 config.yaml로 실행
+make build-mcu                  # ESP32-C3 펌웨어 빌드 (구현 예정)
+make flash-mcu                  # espflash로 플래시 + 모니터링 (구현 예정)
+make install-hooks              # 4 CLI 훅 설치 (jq 필수)
+make install-hooks-claude       # Claude만
+make uninstall-hooks            # CLI 설정에서 kitt-eye 훅 제거 + bin 삭제
+make test                       # go test ./... + cargo test (Rust는 아직 no-op)
+make clean                      # 산출물 제거
 ```
 
 ## 개발
@@ -263,4 +288,4 @@ KITTEYE_TEST_MQTT_USER="..." KITTEYE_TEST_MQTT_PASSWORD="***" \
 
 ## 라이선스
 
-아직 미설정 (MIT 등 선택 예정)
+[MIT](./LICENSE) © 2026 Homin Lee <i@homin.dev>

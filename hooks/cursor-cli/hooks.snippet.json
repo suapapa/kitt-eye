@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-cursor-hook",
+        "type": "command",
+        "timeout": 2
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-cursor-hook",
+        "type": "command",
+        "timeout": 2
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-cursor-hook",
+        "type": "command",
+        "timeout": 2
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-cursor-hook",
+        "type": "command",
+        "timeout": 2
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-cursor-hook",
+        "type": "command",
+        "timeout": 2
+      }
+    ],
+    "stop": [
+      {
+        "command": "$HOME/.kitt-eye/bin/kitt-eye-cursor-hook",
+        "type": "command",
+        "timeout": 2
+      }
+    ]
+  }
+}
