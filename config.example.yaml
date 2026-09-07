@@ -1,0 +1,20 @@
+# kitt-eye configuration example
+mqtt:
+  broker: "homeassistant.local"  # Home Assistant or Mosquitto broker IP/host
+  port: 1883
+  client_id: "kitt-eye-pub"
+  username: "mqtt_user"          # MQTT credentials configured in Home Assistant
+  password: "mqtt_password"
+  topic_prefix: "kitt-eye"
+  keep_alive_seconds: 60
+
+ipc:
+  socket_path: "/tmp/kitt-eye.sock"
+
+agents:
+  - name: "antigravity-cli"
+    enabled: true
+  - name: "codex"
+    enabled: true
+  - name: "cursor-cli"
+    enabled: true
