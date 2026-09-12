@@ -52,7 +52,7 @@ fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 
 const fn classic_pattern(state: AgentState) -> PatternId {
     match state {
-        AgentState::Idle => PatternId::Breathing,
+        AgentState::Idle => PatternId::SlowScanner,
         AgentState::Thinking => PatternId::CenterOut,
         AgentState::Generating => PatternId::FillSweep,
         AgentState::ExecutingTool => PatternId::KittScanner,
@@ -68,7 +68,7 @@ const fn classic_color(_state: AgentState) -> RGB8 {
 
 const fn colorful_pattern(state: AgentState) -> PatternId {
     match state {
-        AgentState::Idle => PatternId::Breathing,
+        AgentState::Idle => PatternId::SlowScanner,
         AgentState::Thinking => PatternId::CenterOut,
         AgentState::Generating => PatternId::FillSweep,
         AgentState::ExecutingTool => PatternId::KittScanner,
@@ -80,7 +80,7 @@ const fn colorful_pattern(state: AgentState) -> PatternId {
 
 const fn colorful_color(state: AgentState) -> RGB8 {
     match state {
-        AgentState::Idle => RGB8::new(0, 180, 255),          // Cool Ice Cyan
+        AgentState::Idle => RGB8::new(255, 0, 0),            // Classic Knight Rider Red (Slow Scanner)
         AgentState::Thinking => RGB8::new(170, 0, 255),      // Electric Violet
         AgentState::Generating => RGB8::new(0, 240, 120),    // Neo Mint Emerald
         AgentState::ExecutingTool => RGB8::new(255, 140, 0), // Vivid Amber (Classic K.I.T.T. Scanner)
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn classic_maps_all_states() {
         let t = MotionTheme::Classic;
-        assert_eq!(t.pattern_for(AgentState::Idle), PatternId::Breathing);
+        assert_eq!(t.pattern_for(AgentState::Idle), PatternId::SlowScanner);
         assert_eq!(t.pattern_for(AgentState::Thinking), PatternId::CenterOut);
         assert_eq!(t.pattern_for(AgentState::Generating), PatternId::FillSweep);
         assert_eq!(
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn colorful_maps_all_states() {
         let t = MotionTheme::Colorful;
-        assert_eq!(t.pattern_for(AgentState::Idle), PatternId::Breathing);
+        assert_eq!(t.pattern_for(AgentState::Idle), PatternId::SlowScanner);
         assert_eq!(t.pattern_for(AgentState::Thinking), PatternId::CenterOut);
         assert_eq!(t.pattern_for(AgentState::Generating), PatternId::FillSweep);
         assert_eq!(
@@ -135,7 +135,7 @@ mod tests {
         assert_eq!(t.pattern_for(AgentState::Done), PatternId::Flash);
         assert_eq!(t.pattern_for(AgentState::Error), PatternId::Comet);
 
-        assert_eq!(t.color_for(AgentState::Idle), RGB8::new(0, 180, 255));
+        assert_eq!(t.color_for(AgentState::Idle), RGB8::new(255, 0, 0));
         assert_eq!(t.color_for(AgentState::Thinking), RGB8::new(170, 0, 255));
         assert_eq!(t.color_for(AgentState::Generating), RGB8::new(0, 240, 120));
         assert_eq!(t.color_for(AgentState::ExecutingTool), RGB8::new(255, 140, 0));

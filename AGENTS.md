@@ -138,7 +138,7 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
 - **Motion Themes (`src/theme.rs`)**:
   - `classic`: All patterns use classic Knight Rider red (`RGB8(255, 0, 0)`). States are distinguished solely by motion pattern.
   - `colorful`: States are mapped to distinct, vivid colors and expressive motions:
-    - `idle` → Cool Cyan (`RGB8(0, 180, 255)`) Breathing
+    - `idle` → Classic Red (`RGB8(255, 0, 0)`) Slow K.I.T.T. Scanner
     - `thinking` → Mystic Purple (`RGB8(170, 0, 255)`) Center-Out
     - `generating` → Mint Emerald (`RGB8(0, 240, 120)`) Fill-Sweep
     - `executing_tool` → Vivid Amber (`RGB8(255, 140, 0)`) **Classic K.I.T.T. Scanner**

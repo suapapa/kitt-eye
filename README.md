@@ -41,7 +41,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 | State | Agent Activity | `classic` (All Red 🔴) | `colorful` (Expressive Colors & Motion) |
 |---|---|---|---|
-| `idle` | Standing by | Breathing | 🔵 Cool Cyan Breathing |
+| `idle` | Standing by | Slow K.I.T.T. Scanner | 🔴 Classic Red Slow K.I.T.T. Scanner |
 | `thinking` | Prompt analysis / reasoning | Center-Out | 🟣 Mystic Purple Center-Out |
 | `generating` | Generating text or code | Fill Sweep | 🟢 Mint Emerald Fill Sweep |
 | `executing_tool` | Executing bash, file, or MCP tool | **K.I.T.T. Scanner (Bouncing)** | 🟠 Vivid Amber **K.I.T.T. Scanner** |

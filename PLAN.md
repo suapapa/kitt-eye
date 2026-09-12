@@ -151,7 +151,7 @@ kitt-eye/
 
 2. **모션 패턴 & 테마**
    - **`classic` (전부 Red 🔴)**:
-     - `idle`: Breathing (호흡 점멸)
+     - `idle`: Slow K.I.T.T. Scanner (느린 좌우 왕복)
      - `thinking`: Center-Out (중앙→양끝 확산)
      - `generating`: Fill Sweep (채움 웨이브)
      - `executing_tool`: K.I.T.T. Scanner (좌우 왕복 스캐너)
@@ -159,7 +159,7 @@ kitt-eye/
      - `done`: Flash → Solid (플래시 후 점등)
      - `error`: Comet (한 방향 혜성)
    - **`colorful` (상태별 생생한 컬러 & 모션)**:
-     - `idle`: Cool Cyan (`RGB8(0, 180, 255)`) Breathing
+     - `idle`: Classic Red (`RGB8(255, 0, 0)`) Slow K.I.T.T. Scanner
      - `thinking`: Mystic Purple (`RGB8(170, 0, 255)`) Center-Out
      - `generating`: Mint Emerald (`RGB8(0, 240, 120)`) Fill Sweep
      - `executing_tool`: Vivid Amber (`RGB8(255, 140, 0)`) **K.I.T.T. Scanner**

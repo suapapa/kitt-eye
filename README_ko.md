@@ -39,7 +39,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 | 상태 | 의미 | `classic` (오리지널 🔴 단색) | `colorful` (생생한 컬러 & 모션) |
 |---|---|---|---|
-| `idle` | 대기 중 | 호흡 점멸 (Breathing) | 🔵 Cool Cyan 호흡 점멸 |
+| `idle` | 대기 중 | 느린 K.I.T.T. 좌우 왕복 (Slow Scanner) | 🔴 Classic Red 느린 좌우 왕복 |
 | `thinking` | 프롬프트 분석 / 추론 중 | 중앙→양끝 확산 (Center-Out) | 🟣 Mystic Purple 중앙 확산 |
 | `generating` | 응답 / 코드 스트리밍 중 | 채움 웨이브 (Fill Sweep) | 🟢 Mint Emerald 채움 웨이브 |
 | `executing_tool` | 쉘/파일/MCP 도구 실행 중 | **K.I.T.T. 좌우 왕복 스캐너** | 🟠 Vivid Amber **K.I.T.T. 스캐너** |

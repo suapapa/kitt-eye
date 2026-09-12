@@ -20,6 +20,9 @@ pub const ANIM_SPEED_MS: u32 = 35;
 /// Tick for Fill Sweep / K.I.T.T. scanner (slower, more deliberate).
 pub const SWEEP_SPEED_MS: u32 = 80;
 
+/// Tick for idle slow K.I.T.T. scanner.
+pub const SLOW_SCANNER_SPEED_MS: u32 = 160;
+
 /// Pattern identifiers (classic theme maps one state → one pattern).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PatternId {
@@ -27,6 +30,7 @@ pub enum PatternId {
     CenterOut,
     FillSweep,
     KittScanner,
+    SlowScanner,
     Blink,
     Flash,
     Comet,
@@ -75,6 +79,7 @@ impl LedEngine {
     /// Frame delay for the active pattern (sweep motions use a slower tick).
     pub const fn anim_delay_ms(&self) -> u32 {
         match self.pattern {
+            PatternId::SlowScanner => SLOW_SCANNER_SPEED_MS,
             PatternId::FillSweep | PatternId::KittScanner => SWEEP_SPEED_MS,
             _ => ANIM_SPEED_MS,
         }
@@ -114,7 +119,7 @@ impl LedEngine {
             PatternId::Breathing => self.step_breathing(color),
             PatternId::CenterOut => self.step_center_out(color),
             PatternId::FillSweep => self.step_fill_sweep(color),
-            PatternId::KittScanner => self.step_kitt_scanner(color),
+            PatternId::KittScanner | PatternId::SlowScanner => self.step_kitt_scanner(color),
             PatternId::Blink => self.step_blink(color),
             PatternId::Flash => self.step_flash(color),
             PatternId::Comet => self.step_comet(color),
@@ -329,7 +334,7 @@ mod tests {
     #[test]
     fn engine_switches_pattern_with_state() {
         let mut eng = LedEngine::new(MotionTheme::Classic);
-        assert_eq!(eng.pattern(), PatternId::Breathing);
+        assert_eq!(eng.pattern(), PatternId::SlowScanner);
         eng.set_state(AgentState::ExecutingTool);
         assert_eq!(eng.pattern(), PatternId::KittScanner);
         eng.set_state(AgentState::Error);
@@ -351,7 +356,7 @@ mod tests {
     #[test]
     fn sweep_patterns_use_slower_delay() {
         let mut eng = LedEngine::new(MotionTheme::Classic);
-        assert_eq!(eng.anim_delay_ms(), ANIM_SPEED_MS);
+        assert_eq!(eng.anim_delay_ms(), SLOW_SCANNER_SPEED_MS);
 
         eng.set_state(AgentState::Generating);
         assert_eq!(eng.pattern(), PatternId::FillSweep);
@@ -361,7 +366,7 @@ mod tests {
         assert_eq!(eng.pattern(), PatternId::KittScanner);
         assert_eq!(eng.anim_delay_ms(), SWEEP_SPEED_MS);
 
-        eng.set_state(AgentState::Idle);
+        eng.set_state(AgentState::WaitingInput);
         assert_eq!(eng.anim_delay_ms(), ANIM_SPEED_MS);
     }
 
@@ -400,6 +405,6 @@ mod tests {
         }
         assert!(saw_nonzero);
         eng.sync_state(AgentState::Idle);
-        assert_eq!(eng.pattern(), PatternId::Breathing);
+        assert_eq!(eng.pattern(), PatternId::SlowScanner);
     }
 }
