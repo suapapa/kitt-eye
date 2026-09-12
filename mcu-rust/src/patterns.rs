@@ -17,11 +17,14 @@ pub const FADE_FACTOR: u8 = 180;
 /// Default milliseconds between animation steps.
 pub const ANIM_SPEED_MS: u32 = 35;
 
-/// Tick for Fill Sweep / K.I.T.T. scanner (slower, more deliberate).
+/// Tick for Fill Sweep (slower, more deliberate).
 pub const SWEEP_SPEED_MS: u32 = 80;
 
 /// Tick for idle slow K.I.T.T. scanner.
 pub const SLOW_SCANNER_SPEED_MS: u32 = 160;
+
+/// Tick for executing_tool fast K.I.T.T. scanner.
+pub const FAST_SCANNER_SPEED_MS: u32 = 40;
 
 /// Pattern identifiers (classic theme maps one state → one pattern).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,7 +83,8 @@ impl LedEngine {
     pub const fn anim_delay_ms(&self) -> u32 {
         match self.pattern {
             PatternId::SlowScanner => SLOW_SCANNER_SPEED_MS,
-            PatternId::FillSweep | PatternId::KittScanner => SWEEP_SPEED_MS,
+            PatternId::KittScanner => FAST_SCANNER_SPEED_MS,
+            PatternId::FillSweep => SWEEP_SPEED_MS,
             _ => ANIM_SPEED_MS,
         }
     }
@@ -364,7 +368,7 @@ mod tests {
 
         eng.set_state(AgentState::ExecutingTool);
         assert_eq!(eng.pattern(), PatternId::KittScanner);
-        assert_eq!(eng.anim_delay_ms(), SWEEP_SPEED_MS);
+        assert_eq!(eng.anim_delay_ms(), FAST_SCANNER_SPEED_MS);
 
         eng.set_state(AgentState::WaitingInput);
         assert_eq!(eng.anim_delay_ms(), ANIM_SPEED_MS);

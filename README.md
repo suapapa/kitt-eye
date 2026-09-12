@@ -44,7 +44,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 | `idle` | Standing by | Slow K.I.T.T. Scanner | 🔴 Classic Red Slow K.I.T.T. Scanner |
 | `thinking` | Prompt analysis / reasoning | Center-Out | 🟣 Mystic Purple Center-Out |
 | `generating` | Generating text or code | Fill Sweep | 🟢 Mint Emerald Fill Sweep |
-| `executing_tool` | Executing bash, file, or MCP tool | **K.I.T.T. Scanner (Bouncing)** | 🟠 Vivid Amber **K.I.T.T. Scanner** |
+| `executing_tool` | Executing bash, file, or MCP tool | **Fast K.I.T.T. Scanner (Bouncing)** | 🟠 Vivid Amber **Fast K.I.T.T. Scanner** |
 | `waiting_input` | **Awaiting user approval / input** | Synchronous Blink | 🟡 Warning Yellow Blink |
 | `done` | Task completed | Flash → Solid | 🟢 Spring Lime Flash → Solid |
 | `error` | Tool failed or command error | One-way Comet | 🔴 Crimson Red Comet |

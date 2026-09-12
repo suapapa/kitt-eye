@@ -83,7 +83,7 @@ const fn colorful_color(state: AgentState) -> RGB8 {
         AgentState::Idle => RGB8::new(255, 0, 0),            // Classic Knight Rider Red (Slow Scanner)
         AgentState::Thinking => RGB8::new(170, 0, 255),      // Electric Violet
         AgentState::Generating => RGB8::new(0, 240, 120),    // Neo Mint Emerald
-        AgentState::ExecutingTool => RGB8::new(255, 140, 0), // Vivid Amber (Classic K.I.T.T. Scanner)
+        AgentState::ExecutingTool => RGB8::new(255, 140, 0), // Vivid Amber (Fast K.I.T.T. Scanner)
         AgentState::WaitingInput => RGB8::new(255, 215, 0),  // Radiant Warning Yellow
         AgentState::Done => RGB8::new(0, 255, 50),           // Pure Spring Lime Green
         AgentState::Error => RGB8::new(255, 20, 20),         // Fiery Crimson Red

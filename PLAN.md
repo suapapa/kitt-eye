@@ -154,7 +154,7 @@ kitt-eye/
      - `idle`: Slow K.I.T.T. Scanner (느린 좌우 왕복)
      - `thinking`: Center-Out (중앙→양끝 확산)
      - `generating`: Fill Sweep (채움 웨이브)
-     - `executing_tool`: K.I.T.T. Scanner (좌우 왕복 스캐너)
+     - `executing_tool`: Fast K.I.T.T. Scanner (빠른 좌우 왕복 스캐너)
      - `waiting_input`: Blink (동기 점멸)
      - `done`: Flash → Solid (플래시 후 점등)
      - `error`: Comet (한 방향 혜성)
@@ -162,7 +162,7 @@ kitt-eye/
      - `idle`: Classic Red (`RGB8(255, 0, 0)`) Slow K.I.T.T. Scanner
      - `thinking`: Mystic Purple (`RGB8(170, 0, 255)`) Center-Out
      - `generating`: Mint Emerald (`RGB8(0, 240, 120)`) Fill Sweep
-     - `executing_tool`: Vivid Amber (`RGB8(255, 140, 0)`) **K.I.T.T. Scanner**
+     - `executing_tool`: Vivid Amber (`RGB8(255, 140, 0)`) **Fast K.I.T.T. Scanner**
      - `waiting_input`: Warning Yellow (`RGB8(255, 215, 0)`) Blink
      - `done`: Spring Lime (`RGB8(0, 255, 50)`) Flash → Solid
      - `error`: Crimson Red (`RGB8(255, 20, 20)`) Comet
