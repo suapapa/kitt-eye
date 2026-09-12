@@ -168,6 +168,21 @@ make run-sub
 
 ---
 
+### 3b. 하드웨어 및 상태 데모 (AI Agent 훅 연동 없이 테스트)
+
+실제 AI CLI 에이전트 작업을 기다리지 않고 ESP32 LED 바의 애니메이션이나 Home Assistant 연동을 즉시 시연/테스트할 수 있습니다:
+
+```bash
+make demo                               # 7개 전체 상태 자동 순환 데모
+./script/mock_state.sh -m workflow      # 실제 AI 페어 프로그래밍 시나리오 데모
+./script/mock_state.sh -m interactive   # 숫자 키(1~7)로 실시간 상태 변경 메뉴
+./script/mock_state.sh thinking         # 특정 상태 단독 1회 발행
+```
+
+자세한 옵션과 사용법은 [`script/README.md`](script/README.md)를 참고하세요.
+
+---
+
 ### 4. CLI 훅 설치
 
 단 한 번의 명령어로 사용 중인 모든 AI 코딩 도구에 kitt-eye 훅을 멱등(Idempotent)하게 등록합니다:

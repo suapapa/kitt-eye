@@ -49,6 +49,7 @@ kitt-eye/
 │   └── antigravity-cli/     # Antigravity (~/.gemini/config/hooks.json)
 ├── pub-go/                  # Go Publisher Daemon (module: github.com/suapapa/kitt-eye/pub)
 │   ├── cmd/kitteye/         # Daemon entry point
+│   ├── cmd/kitteye_mock/    # Mock state generator for hardware demos
 │   ├── cmd/kitteye_sub_example/ # MQTT subscriber test utility
 │   └── internal/
 │       ├── config/          # YAML config parser & env overrides
@@ -57,6 +58,10 @@ kitt-eye/
 │       ├── state/           # Session state store, TTLs, and aggregator
 │       ├── publish/         # Sink interface (MQTT & dry-run stdout sinks)
 │       └── mqtt/            # Paho MQTT v3 client, LWT, and HA discovery
+├── script/                  # Demo & mock state scripts
+│   ├── mock_state.sh        # Executable mock state generator (reads config.yaml)
+│   ├── demo.sh              # Shortcut symlink to mock_state.sh
+│   └── README.md            # Demo script documentation
 ├── mcu-rust-common/        # Shared MCU logic (no_std library: state, theme, patterns, mqtt, app_main)
 │   ├── Cargo.toml           # Core dependencies (smart-leds, embedded-io-async, heapless)
 │   ├── build.rs             # Unified build script (loads .env, sets cargo:rustc-env, linker flags)
@@ -99,6 +104,12 @@ make run-pub            # Runs publisher using config.yaml (stdout JSON sink if 
 # In another terminal:
 ./hooks/common/send_event.sh claude executing_tool "Running tests"
 ./hooks/common/send_event.sh claude done "All tests passed"
+
+# Mock state demo (simulates states without AI CLI agents or hooks)
+make demo               # Run automated state cycling demo using config.yaml
+./script/mock_state.sh -m workflow     # Run realistic agent pair-programming demo
+./script/mock_state.sh -m interactive  # Interactive keyboard menu to switch states
+./script/mock_state.sh thinking        # Publish single state directly to MQTT
 
 # CLI Hooks management (requires jq and nc)
 make install-hooks      # Idempotently inject hooks for all 4 supported CLIs

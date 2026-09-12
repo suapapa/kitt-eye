@@ -164,6 +164,21 @@ make run-sub
 
 ---
 
+### 3b. Hardware & State Demo (Without AI Agent Hooks)
+
+Want to test your ESP32 LED bar animations without waiting for real AI coding agents? Run the mock state generator:
+
+```bash
+make demo                               # Automatic cycling across all 7 states
+./script/mock_state.sh -m workflow      # Realistic agent workflow demo
+./script/mock_state.sh -m interactive   # Interactive keyboard menu [1-7]
+./script/mock_state.sh thinking         # Publish single state directly
+```
+
+See the [`script/README.md`](script/README.md) for full options and CLI arguments.
+
+---
+
 ### 4. Install CLI Lifecycle Hooks
 
 Install hooks into all supported AI CLI configurations with one idempotent command:
