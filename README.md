@@ -8,15 +8,21 @@
 
 여러 터미널/세션에서 AI 에이전트를 돌려놓으면 "지금 뭐 하고 있지? 끝나긴 한 건가? 나를 기다리고 있나?"를 확인할 방법이 없습니다. kitt-eye는 방 건너편에서도 한눈에 알 수 있게 해 줍니다.
 
-| LED 패턴 (`MOTION_THEME=classic`, 전부 🔴) | 상태 | 의미 |
-|---|---|---|
-| Breathing (호흡) | `idle` | 대기 |
-| Center-Out (중앙→양끝) | `thinking` | 추론 중 |
-| Fill Sweep (채움 웨이브) | `generating` | 응답/코드 생성 중 |
-| K.I.T.T. 스캐너 (좌우 왕복) | `executing_tool` | 도구/쉘/파일 작업 실행 중 |
-| Blink (동기 점멸) | `waiting_input` | **사용자 확인/입력 대기** |
-| Flash → Solid | `done` | 완료 |
-| Comet (한 방향 혜성) | `error` | 실패 |
+### LED 모션 테마
+
+kitt-eye는 2가지 모션 테마를 지원합니다:
+- **`classic`**: 오리지널 K.I.T.T.의 상징적인 고전 레드(🔴) 단색 테마로, 모션 패턴으로 상태를 표현합니다.
+- **`colorful`**: 상태별 고유한 생생한 색상과 다채로운 모션(도구 실행 시 호박색 K.I.T.T. 스캐너 등)으로 방 건너편에서도 직관적으로 상태를 식별할 수 있습니다.
+
+| 상태 | 의미 | `classic` (전부 🔴) | `colorful` (생생한 컬러 & 모션) |
+|---|---|---|---|
+| `idle` | 대기 | Breathing (호흡 점멸) | 🔵 Cool Cyan Breathing |
+| `thinking` | 추론 중 | Center-Out (중앙→양끝) | 🟣 Mystic Purple Center-Out |
+| `generating` | 응답/코드 생성 중 | Fill Sweep (채움 웨이브) | 🟢 Mint Emerald Fill Sweep |
+| `executing_tool` | 도구/쉘/파일 작업 실행 중 | K.I.T.T. 스캐너 (좌우 왕복) | 🟠 Vivid Amber **K.I.T.T. 스캐너** |
+| `waiting_input` | **사용자 확인/입력 대기** | Blink (동기 점멸) | 🟡 Warning Yellow Blink |
+| `done` | 완료 | Flash → Solid | 🟢 Spring Lime Flash → Solid |
+| `error` | 실패 | Comet (한 방향 혜성) | 🔴 Crimson Red Comet |
 
 ## 시스템 아키텍처
 
@@ -210,7 +216,7 @@ make flash-mcu   # cargo espflash flash --release --monitor
 | `.env` 키 | 설명 |
 |---|---|
 | `SSID` / `PASS` | 연결할 Wi-Fi AP |
-| `MOTION_THEME` | 모션 테마 (`classic` = 전부 빨강, 상태별 모션) |
+| `MOTION_THEME` | 모션 테마 (`classic` = 전부 빨강, `colorful` = 상태별 생생한 컬러 & 모션) |
 | `MQTT_BROKER` / `MQTT_PORT` | 브로커 호스트(또는 IPv4)와 포트 |
 | `MQTT_USER` / `MQTT_PASS` | 브로커 인증 (비우면 anonymous) |
 | `MQTT_TOPIC_PREFIX` | 기본 `kitt-eye` → 구독 토픽 `{prefix}/active_state` |

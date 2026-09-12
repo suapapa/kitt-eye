@@ -5,7 +5,7 @@ pub const SSID: &str = env!("SSID");
 /// Wi-Fi password.
 pub const PASS: &str = env!("PASS");
 
-/// Motion theme name (`classic` = all-red state→motion map).
+/// Motion theme name (`classic` = all-red state→motion map, `colorful` = vivid color-coded theme).
 pub const MOTION_THEME: &str = env!("MOTION_THEME");
 
 /// MQTT broker hostname or IPv4 literal.

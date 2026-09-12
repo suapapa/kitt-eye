@@ -57,12 +57,26 @@ impl LedEngine {
         }
     }
 
+    pub const fn theme(&self) -> MotionTheme {
+        self.theme
+    }
+
     pub const fn state(&self) -> AgentState {
         self.state
     }
 
     pub const fn pattern(&self) -> PatternId {
         self.pattern
+    }
+
+    /// Switch motion theme if changed.
+    pub fn set_theme(&mut self, theme: MotionTheme) {
+        if theme == self.theme {
+            return;
+        }
+        self.theme = theme;
+        self.pattern = self.theme.pattern_for(self.state);
+        self.reset_pattern();
     }
 
     /// Switch agent state (and thus pattern) if changed.
@@ -84,14 +98,15 @@ impl LedEngine {
 
     /// Advance one animation frame; returns the pixel buffer to write.
     pub fn step(&mut self) -> &[RGB8; LED_COUNT] {
+        let color = self.theme.color_for(self.state);
         match self.pattern {
-            PatternId::Breathing => self.step_breathing(),
-            PatternId::CenterOut => self.step_center_out(),
-            PatternId::FillSweep => self.step_fill_sweep(),
-            PatternId::KittScanner => self.step_kitt_scanner(),
-            PatternId::Blink => self.step_blink(),
-            PatternId::Flash => self.step_flash(),
-            PatternId::Comet => self.step_comet(),
+            PatternId::Breathing => self.step_breathing(color),
+            PatternId::CenterOut => self.step_center_out(color),
+            PatternId::FillSweep => self.step_fill_sweep(color),
+            PatternId::KittScanner => self.step_kitt_scanner(color),
+            PatternId::Blink => self.step_blink(color),
+            PatternId::Flash => self.step_flash(color),
+            PatternId::Comet => self.step_comet(color),
         }
         &self.pixels
     }
@@ -114,7 +129,7 @@ impl LedEngine {
         self.reset_pattern();
     }
 
-    fn step_breathing(&mut self) {
+    fn step_breathing(&mut self, color: RGB8) {
         // Triangle wave 0..255..0
         let p = self.phase as u8;
         let level = if p < 128 {
@@ -122,7 +137,7 @@ impl LedEngine {
         } else {
             255u8.saturating_sub(p.saturating_sub(128).saturating_mul(2))
         };
-        let c = scale_color(BASE_COLOR, level);
+        let c = scale_color(color, level);
         self.pixels = [c; LED_COUNT];
         self.phase = self.phase.wrapping_add(2);
         if self.phase >= 256 {
@@ -130,7 +145,7 @@ impl LedEngine {
         }
     }
 
-    fn step_center_out(&mut self) {
+    fn step_center_out(&mut self, color: RGB8) {
         fade_all(&mut self.pixels, FADE_FACTOR);
         // Radius expands 0 .. LED_COUNT/2 then contracts.
         let half = (LED_COUNT / 2) as u16;
@@ -147,19 +162,19 @@ impl LedEngine {
                 i - mid_hi
             };
             if dist as u16 == radius {
-                self.pixels[i] = BASE_COLOR;
+                self.pixels[i] = color;
             } else if dist as u16 + 1 == radius {
-                self.pixels[i] = scale_color(BASE_COLOR, 100);
+                self.pixels[i] = scale_color(color, 100);
             }
         }
         self.phase = self.phase.wrapping_add(1);
     }
 
-    fn step_fill_sweep(&mut self) {
+    fn step_fill_sweep(&mut self, color: RGB8) {
         let fill_to = (self.phase as usize) % (LED_COUNT + 1);
         for i in 0..LED_COUNT {
             self.pixels[i] = if i < fill_to {
-                BASE_COLOR
+                color
             } else {
                 RGB8::new(0, 0, 0)
             };
@@ -177,10 +192,10 @@ impl LedEngine {
         }
     }
 
-    fn step_kitt_scanner(&mut self) {
+    fn step_kitt_scanner(&mut self, color: RGB8) {
         fade_all(&mut self.pixels, FADE_FACTOR);
         let pos = (self.phase as usize).min(LED_COUNT - 1);
-        self.pixels[pos] = BASE_COLOR;
+        self.pixels[pos] = color;
 
         let next = pos as i8 + self.dir;
         if next >= (LED_COUNT as i8 - 1) {
@@ -194,11 +209,11 @@ impl LedEngine {
         }
     }
 
-    fn step_blink(&mut self) {
+    fn step_blink(&mut self, color: RGB8) {
         // ~350ms on / off at 35ms tick → toggle every 10 frames
         let on = (self.phase / 10) % 2 == 0;
         let c = if on {
-            BASE_COLOR
+            color
         } else {
             RGB8::new(0, 0, 0)
         };
@@ -206,30 +221,30 @@ impl LedEngine {
         self.phase = self.phase.wrapping_add(1);
     }
 
-    fn step_flash(&mut self) {
+    fn step_flash(&mut self, color: RGB8) {
         // 6 rapid flashes then solid
         const FLASHES: u8 = 6;
         if self.aux < FLASHES * 2 {
             let on = self.aux % 2 == 0;
             let c = if on {
-                BASE_COLOR
+                color
             } else {
                 RGB8::new(0, 0, 0)
             };
             self.pixels = [c; LED_COUNT];
             self.aux = self.aux.saturating_add(1);
         } else {
-            self.pixels = [BASE_COLOR; LED_COUNT];
+            self.pixels = [color; LED_COUNT];
         }
     }
 
-    fn step_comet(&mut self) {
+    fn step_comet(&mut self, color: RGB8) {
         fade_all(&mut self.pixels, 140); // longer trail
         let pos = (self.phase as usize) % LED_COUNT;
-        self.pixels[pos] = BASE_COLOR;
+        self.pixels[pos] = color;
         // Soft secondary head
         let prev = if pos == 0 { LED_COUNT - 1 } else { pos - 1 };
-        self.pixels[prev] = scale_color(BASE_COLOR, 160);
+        self.pixels[prev] = scale_color(color, 160);
         self.phase = self.phase.wrapping_add(1);
     }
 
@@ -311,21 +326,35 @@ mod tests {
     }
 
     #[test]
-    fn steps_do_not_panic() {
+    fn engine_theme_switching() {
         let mut eng = LedEngine::new(MotionTheme::Classic);
-        for state in [
-            AgentState::Idle,
-            AgentState::Thinking,
-            AgentState::Generating,
-            AgentState::ExecutingTool,
-            AgentState::WaitingInput,
-            AgentState::Done,
-            AgentState::Error,
-        ] {
-            eng.set_state(state);
-            for _ in 0..64 {
-                let frame = eng.step();
-                assert_eq!(frame.len(), LED_COUNT);
+        assert_eq!(eng.theme(), MotionTheme::Classic);
+        eng.set_state(AgentState::ExecutingTool);
+        assert_eq!(eng.pattern(), PatternId::KittScanner);
+
+        eng.set_theme(MotionTheme::Colorful);
+        assert_eq!(eng.theme(), MotionTheme::Colorful);
+        assert_eq!(eng.pattern(), PatternId::KittScanner);
+    }
+
+    #[test]
+    fn steps_do_not_panic() {
+        for theme in [MotionTheme::Classic, MotionTheme::Colorful] {
+            let mut eng = LedEngine::new(theme);
+            for state in [
+                AgentState::Idle,
+                AgentState::Thinking,
+                AgentState::Generating,
+                AgentState::ExecutingTool,
+                AgentState::WaitingInput,
+                AgentState::Done,
+                AgentState::Error,
+            ] {
+                eng.set_state(state);
+                for _ in 0..64 {
+                    let frame = eng.step();
+                    assert_eq!(frame.len(), LED_COUNT);
+                }
             }
         }
     }

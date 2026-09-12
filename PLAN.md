@@ -141,15 +141,24 @@ kitt-eye/
    - **설정**: `mcu-rust/.env` (`SSID`, `PASS`, `MOTION_THEME`, `MQTT_BROKER`, …)
 2. **동작 시나리오**
    - Wi-Fi 부팅 및 HA Mosquitto 브로커 접속 (`kitt-eye/#` 토픽 구독).
-  - 수신된 에이전트 상태에 따라 LED 패턴 렌더링 (`MOTION_THEME=classic`, **전부 Red**):
-     - **Breathing**: `idle`
-     - **Center-Out**: `thinking`
-     - **Fill Sweep**: `generating`
-     - **K.I.T.T. Scanner (좌우 왕복)**: `executing_tool`
-     - **Blink**: `waiting_input`
-     - **Flash → Solid**: `done`
-     - **Comet (한 방향 혜성)**: `error`
-   - Wi-Fi / MQTT / 테마는 `mcu-rust/.env` → `build.rs` → `env!`로 컴파일 타임 주입.
+  - 수신된 에이전트 상태에 따라 LED 패턴 및 색상 렌더링:
+     - `MOTION_THEME=classic` (**전부 Red 🔴**):
+       - **Breathing**: `idle`
+       - **Center-Out**: `thinking`
+       - **Fill Sweep**: `generating`
+       - **K.I.T.T. Scanner (좌우 왕복)**: `executing_tool`
+       - **Blink**: `waiting_input`
+       - **Flash → Solid**: `done`
+       - **Comet (한 방향 혜성)**: `error`
+     - `MOTION_THEME=colorful` (**상태별 생생한 컬러 & 모션**):
+       - **Cool Cyan Breathing (호흡 점멸)**: `idle`
+       - **Mystic Purple Center-Out (중앙→양끝 확산)**: `thinking`
+       - **Mint Emerald Fill Sweep (채움 웨이브)**: `generating`
+       - **Vivid Amber K.I.T.T. Scanner (좌우 왕복 스캐너)**: `executing_tool`
+       - **Warning Yellow Blink (동기 점멸)**: `waiting_input`
+       - **Spring Lime Flash → Solid (플래시 후 점등)**: `done`
+       - **Crimson Red Comet (한 방향 혜성)**: `error`
+    - Wi-Fi / MQTT / 테마는 `mcu-rust/.env` → `build.rs` → `env!`로 컴파일 타임 주입.
 
 ### 4.4. Claude Code (`claude`) 훅 연동
 
