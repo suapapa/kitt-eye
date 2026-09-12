@@ -83,18 +83,18 @@ async fn main(spawner: Spawner) -> ! {
     let sw_interrupt = SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
     esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
 
+    let theme = MotionTheme::from_name(MOTION_THEME);
+    let mut engine = LedEngine::new(theme);
+
     esp_println::logger::init_logger_from_env();
-    println!("kitt-eye boot");
+    println!("kitt-eye boot (theme: {})", theme.as_str());
     println!(
         "SSID len={} theme={} broker={}:{}",
         SSID.len(),
-        MOTION_THEME,
+        theme.as_str(),
         MQTT_BROKER,
         config::mqtt_port()
     );
-
-    let theme = MotionTheme::from_name(MOTION_THEME);
-    let mut engine = LedEngine::new(theme);
 
     // Same wiring as before: GPIO4=SCK (unused), GPIO6=MOSI→DIN.
     let spi = Spi::new(
@@ -139,6 +139,11 @@ async fn main(spawner: Spawner) -> ! {
         let wifi_up = WIFI_CONNECTED.load(Ordering::Relaxed);
         if wifi_up && !wifi_was_up {
             let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
+            println!(
+                "wifi up, active_state={} (theme: {})",
+                state.as_str(),
+                theme.as_str()
+            );
             engine.sync_state(state);
         } else if !wifi_up && wifi_was_up {
             engine.begin_wifi_wait();
@@ -245,7 +250,12 @@ async fn mqtt_task(stack: Stack<'static>) {
                         .unwrap_or(0);
                     if let Some(state) = AgentState::from_mqtt(&bytes[..end]) {
                         ACTIVE_STATE.store(state as u8, Ordering::Relaxed);
-                        println!("active_state={}", state.as_str());
+                        let theme = MotionTheme::from_name(MOTION_THEME);
+                        println!(
+                            "active_state={} (theme: {})",
+                            state.as_str(),
+                            theme.as_str()
+                        );
                     } else {
                         println!("unknown state payload");
                     }

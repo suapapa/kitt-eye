@@ -28,6 +28,14 @@ impl MotionTheme {
         }
     }
 
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Classic => "classic",
+            Self::Colorful => "colorful",
+        }
+    }
+
+
     pub const fn pattern_for(self, state: AgentState) -> PatternId {
         match self {
             Self::Classic => classic_pattern(state),
