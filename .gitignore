@@ -19,14 +19,23 @@ Thumbs.db
 
 # Go
 **/bin/
+!**/src/bin/
 *.exe
 *.test
 *.out
 coverage.out
 coverage.html
 
-# Rust
+# Rust / embedded
 **/target/
+**/.embuild/
+*.elf
+*.bin
+*.hex
+*.map
+
+# Local reference clones (not part of the tree)
+**/_ref/
 
 # Local runtime config (keep example committed)
 /config.yaml
