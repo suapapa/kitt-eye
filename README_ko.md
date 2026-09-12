@@ -2,7 +2,7 @@
 
 [English](README.md) | [한국어](README_ko.md)
 
-> AI 코딩 에이전트의 상태를 MQTT로 수집하여, ESP32-C3 기반 **K.I.T.T. 스캐너 LED 바**(및 Home Assistant)로 시각화하는 홈랩 모니터링 시스템
+> AI 코딩 에이전트의 상태를 MQTT로 수집하여, ESP32-S2 기반 **K.I.T.T. 스캐너 LED 바**(및 Home Assistant)로 시각화하는 홈랩 모니터링 시스템
 
 여러 터미널에서 `claude`, `codex`, `cursor-cli`, `antigravity-cli` 같은 AI 에이전트를 동시에 실행해 두면, 지금 모델이 생각 중인지, 도구를 실행 중인지, 혹은 사용자의 입력/승인을 기다리고 있는지 터미널 창을 일일이 열어보지 않고는 알기 어렵습니다.
 
@@ -26,7 +26,7 @@
   - LWT(Last Will and Testament)로 데몬 오프라인 상태 자동 감지.
   - Home Assistant MQTT Discovery 자동 센서 등록 지원.
 - **초경량 임베디드 펌웨어**:
-  - ESP32-C3 베어메탈 Rust (`esp-hal` + `embassy`), WS2812B NeoPixel 8구 LED 바 제어.
+  - ESP32-S2 베어메탈 Rust (`esp-hal` + `embassy`), WS2812B NeoPixel 8구 LED 바 제어.
 
 ---
 
@@ -73,7 +73,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
          │
          ├──────────────────────────────────────┐
          ▼                                      ▼
-[ ESP32-C3 LED 바 (Rust / Embassy) ]   [ Home Assistant ]
+[ ESP32-S2 LED 바 (Rust / Embassy) ]   [ Home Assistant ]
  └── WS2812B NeoPixel 8구 K.I.T.T. 스캐너    └── 센서 대시보드 (자동 Discovery)
 ```
 
@@ -81,14 +81,16 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ## 🔌 하드웨어 구성 & 배선
 
+> 보드별 상세 핀아웃 다이어그램과 트러블슈팅은 [하드웨어 연결 가이드](docs/hardware_wiring.md)를 참고하세요.
+
 ### 준비물
-- **ESP32-C3 개발 보드** (SuperMini, NodeMCU 등 RISC-V 코어 보드)
+- **ESP32-S2 개발 보드** (S2 Mini 등 Xtensa 코어 보드)
 - **WS2812B NeoPixel 8구 LED 바** (또는 LED 스트립/링, 기본 8구 설정)
 - 점퍼 케이블 및 USB 케이블
 
 ### 배선도
 
-| ESP32-C3 핀 | WS2812B LED 바 핀 | 비고 |
+| ESP32-S2 핀 | WS2812B LED 바 핀 | 비고 |
 |---|---|---|
 | **5V** (또는 3V3) | **VCC / 5V** | 8구 기준 3.3V로도 동작 가능하나 5V 권장 |
 | **GND** | **GND** | 공통 접지 |
@@ -107,8 +109,8 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
   - macOS: `brew install jq`
   - Ubuntu/Debian: `sudo apt install jq`
 - **`nc` (netcat)** (Unix 소켓 전송용, macOS/Linux 기본 포함)
-- **Rust toolchain** (ESP32-C3 펌웨어 빌드용)
-  - `rustup target add riscv32imc-unknown-none-elf`
+- **Rust toolchain** (ESP32-S2 펌웨어 빌드용)
+  - `espup install` (또는 `esp` 툴체인)
   - `cargo install espflash`
 
 ---
@@ -187,11 +189,16 @@ make install-hooks
 
 ---
 
-### 5. ESP32-C3 펌웨어 빌드 & 플래시
+### 5. MCU 펌웨어 빌드 & 플래시 (ESP32-C3 / ESP32-S2)
+
+사용 중인 MCU 보드 디렉터리에서 `.env` 설정을 완료합니다:
 
 ```bash
-cd mcu-rust
-cp .env.example .env
+# ESP32-C3 사용 시:
+cd mcu-rust-esp32c3 && cp .env.example .env
+
+# ESP32-S2 사용 시:
+cd mcu-rust-esp32s2 && cp .env.example .env
 
 # .env 파일을 열고 Wi-Fi 및 MQTT 정보를 입력합니다:
 # SSID="MyWiFi"
@@ -199,8 +206,10 @@ cp .env.example .env
 # MQTT_BROKER="homeassistant.local"
 # MOTION_THEME="colorful"   # 'classic' 또는 'colorful'
 
-# 펌웨어 빌드 및 플래시 (ESP32-C3를 USB로 연결한 후)
-make flash-mcu
+# 칩에 맞는 타깃으로 빌드 및 플래시:
+make flash-mcu-c3   # ESP32-C3 보드 플래시
+# 또는
+make flash-mcu-s2   # ESP32-S2 보드 플래시 (--no-stub 자동 적용)
 ```
 
 이제 AI 에이전트에게 코딩을 시키면 데스크 위의 LED 바가 실시간으로 화려하게 반응합니다!
@@ -230,11 +239,14 @@ make build-pub                  # Go Publisher 빌드 -> pub-go/bin/kitt-eye-pub
 make run-pub                    # Go Publisher 데몬 실행
 make build-sub                  # MQTT 테스트 구독자 빌드 -> pub-go/bin/kitt-eye-sub
 make run-sub                    # MQTT 토픽 실시간 모니터링
-make build-mcu                  # ESP32-C3 Rust 펌웨어 빌드
-make flash-mcu                  # ESP32-C3 펌웨어 플래시 및 시리얼 모니터링
+make build-mcu                  # ESP32-C3 & S2 펌웨어 일괄 빌드
+make build-mcu-c3               # ESP32-C3 Rust 펌웨어 빌드
+make build-mcu-s2               # ESP32-S2 Rust 펌웨어 빌드
+make flash-mcu-c3               # ESP32-C3 펌웨어 플래시 및 시리얼 모니터링
+make flash-mcu-s2               # ESP32-S2 펌웨어 플래시 (--no-stub) 및 모니터링
 make install-hooks              # 4개 CLI 훅 일괄 설치
 make uninstall-hooks            # 4개 CLI 훅 일괄 제거
-make test                       # 전체 테스트 (Go 단위 테스트 + Rust 체크)
+make test                       # 전체 테스트 (Go 단위 테스트 + C3/S2 Rust 체크)
 make clean                      # 빌드 산출물 정리
 ```
 

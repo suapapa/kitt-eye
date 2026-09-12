@@ -1,4 +1,6 @@
-.PHONY: help build-pub run-pub build-sub run-sub build-mcu flash-mcu \
+.PHONY: help build-pub run-pub build-sub run-sub \
+	build-mcu build-mcu-c3 build-mcu-s2 \
+	flash-mcu flash-mcu-c3 flash-mcu-s2 \
 	install-hooks uninstall-hooks \
 	install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli \
 	test clean
@@ -9,15 +11,19 @@ Targets:\n\
   run-pub                   Run Go publisher daemon locally\n\
   build-sub                 Build Go MQTT subscriber example (cmd/kitteye_sub_example)\n\
   run-sub                   Run MQTT subscriber example (shares config.yaml)\n\
-  build-mcu                 Build ESP32-C3 Rust firmware\n\
-  flash-mcu                 Flash ESP32-C3 firmware via cargo espflash\n\
+  build-mcu                 Build both ESP32-C3 and ESP32-S2 Rust firmwares\n\
+  build-mcu-c3              Build ESP32-C3 Rust firmware\n\
+  build-mcu-s2              Build ESP32-S2 Rust firmware\n\
+  flash-mcu-c3              Flash ESP32-C3 firmware via cargo espflash\n\
+  flash-mcu-s2              Flash ESP32-S2 firmware via cargo espflash (--no-stub)\n\
+  flash-mcu                 Show usage for flashing by chip\n\
   install-hooks             Install hooks for all CLIs (requires jq)\n\
   install-hooks-claude      Install Claude Code hooks only\n\
   install-hooks-codex       Install Codex hooks only\n\
   install-hooks-cursor-cli  Install Cursor CLI hooks only\n\
   install-hooks-antigravity-cli  Install Antigravity CLI hooks only\n\
   uninstall-hooks           Remove kitt-eye hooks from CLI settings + bins\n\
-  test                      Run test suite across Go and Rust components\n\
+  test                      Run test suite across Go and both Rust components\n\
   clean                     Clean build artifacts\n"
 
 MERGE := ./hooks/common/merge_hooks.sh
@@ -41,13 +47,28 @@ run-sub: build-sub
 	@echo "==> Starting Go MQTT subscriber example..."
 	./pub-go/bin/kitt-eye-sub --config config.yaml
 
-build-mcu:
+build-mcu: build-mcu-c3 build-mcu-s2
+
+build-mcu-c3:
 	@echo "==> Building ESP32-C3 Rust firmware..."
-	cd mcu-rust && cargo build --release
+	cd mcu-rust-esp32c3 && cargo build --release
+
+build-mcu-s2:
+	@echo "==> Building ESP32-S2 Rust firmware..."
+	cd mcu-rust-esp32s2 && ([ -f $(HOME)/export-esp.sh ] && . $(HOME)/export-esp.sh; cargo build --release)
 
 flash-mcu:
+	@echo "Please specify target chip:"
+	@echo "  make flash-mcu-c3   # Flash ESP32-C3 firmware"
+	@echo "  make flash-mcu-s2   # Flash ESP32-S2 firmware (--no-stub)"
+
+flash-mcu-c3:
 	@echo "==> Flashing ESP32-C3 Rust firmware..."
-	cd mcu-rust && cargo espflash flash --release --monitor
+	cd mcu-rust-esp32c3 && cargo espflash flash --release --monitor
+
+flash-mcu-s2:
+	@echo "==> Flashing ESP32-S2 Rust firmware..."
+	cd mcu-rust-esp32s2 && ([ -f $(HOME)/export-esp.sh ] && . $(HOME)/export-esp.sh; cargo espflash flash --release --monitor --no-stub)
 
 install-hooks: install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli
 	@echo "==> All CLI hooks installed."
@@ -75,8 +96,10 @@ uninstall-hooks:
 test:
 	@echo "==> Testing Go publisher..."
 	cd pub-go && go test ./...
-	@echo "==> Checking Rust firmware..."
-	cd mcu-rust && cargo check --release
+	@echo "==> Checking ESP32-C3 Rust firmware..."
+	cd mcu-rust-esp32c3 && cargo check --release
+	@echo "==> Checking ESP32-S2 Rust firmware..."
+	cd mcu-rust-esp32s2 && cargo check --release
 
 clean:
-	rm -rf pub-go/bin mcu-rust/target
+	rm -rf pub-go/bin mcu-rust-esp32c3/target mcu-rust-esp32s2/target

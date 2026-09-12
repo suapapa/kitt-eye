@@ -2,54 +2,48 @@
 
 [English](README.md) | [한국어](README_ko.md)
 
-> A homelab status monitoring system that captures lifecycle events from AI coding agents, aggregates their states via a Go daemon over MQTT, and visualizes them on an ESP32-C3 **K.I.T.T. scanner LED bar** (and Home Assistant).
+> A homelab status monitoring system that captures lifecycle events from AI coding agents, aggregates their states via a Go daemon over MQTT, and visualizes them on an ESP32-S2 **K.I.T.T. scanner LED bar** (and Home Assistant).
 
-When running multiple AI coding agents across terminals (`claude`, `codex`, `cursor-cli`, `antigravity-cli`), it is difficult to tell what they are doing without constantly checking each window: *Are they thinking? Running a build? Finished? Or waiting for your input?*
+Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`) across multiple terminal tabs leaves you guessing: is the agent still thinking, executing a long bash tool, or blocked waiting for user approval?
 
-**kitt-eye** bridges this gap by turning an ESP32-C3 and an 8-LED NeoPixel strip into an iconic K.I.T.T. scanner on your desk, giving you peripheral awareness of your AI agents from across the room.
+**kitt-eye** bridges this gap by turning an ESP32-S2 and an 8-LED NeoPixel strip into an iconic K.I.T.T. scanner on your desk, giving you peripheral awareness of your AI agents from across the room.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Highlights
 
-- **Multi-Agent CLI Support**: Native hook integration for **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, and **Antigravity CLI** (`agy`).
-- **2 LED Motion Themes**:
-  - **`classic`**: Pure Knight Rider monochrome red (🔴) scanner. States are conveyed purely through distinct motion dynamics.
-  - **`colorful`**: High-contrast, vivid color palette (Amber K.I.T.T. scanner, Cyan breathing, Yellow blink, etc.) for instant glanceability.
-- **Zero CLI Overhead**:
-  - Hooks send fire-and-forget single-line JSON datagrams to a local Unix Domain Socket (`/tmp/kitt-eye.sock`).
-  - No stdout pollution, fail-safe exits, and sub-millisecond execution.
-- **Intelligent State Aggregation**:
-  - Multi-session, multi-agent priority resolution: `error` > `waiting_input` > `executing_tool` > `generating` > `thinking` > `done` > `idle`.
-  - Configurable state TTLs (`done` and `error` auto-revert to `idle`, crashed sessions are cleaned up).
-- **Home Assistant & MQTT First-Class Support**:
+- **Multi-Agent CLI Support**: Native lifecycle hooks for Claude Code, OpenAI Codex CLI, Cursor CLI, and Antigravity CLI (`agy`).
+- **2 Expressive Motion Themes**:
+  - **`classic`**: Pure Knight Rider K.I.T.T. scanner in iconic red (🔴). States are conveyed exclusively through movement patterns.
+  - **`colorful`**: Vivid state color codes (e.g. Amber scanner, Mystic Purple breathing, Mint emerald waves, Warning yellow blink) for instant peripheral recognition.
+- **Zero CLI Overhead**: Hooks send fire-and-forget JSON over Unix Domain Socket (`/tmp/kitt-eye.sock`) with zero stdout pollution.
+- **Smart Session Aggregation**: Strict priority hierarchy (`error` > `waiting_input` > `executing_tool` > ...) resolving multiple active agents and terminal windows into a single representative state.
+- **Automatic TTL Expiration**: Transient states (`done`, `error`) revert back to `idle` cleanly; abandoned sessions auto-expire.
+- **Home Assistant & MQTT Native**:
   - Retained QoS 1 messages (ESP32 immediately picks up the current state upon boot).
-  - Last Will and Testament (LWT) for daemon online/offline presence.
-  - Optional Home Assistant MQTT Discovery for instant entity setup.
-- **Ultra-Lightweight Embedded Firmware**:
-  - Bare-metal Rust (`no_std`, `esp-hal` + `embassy`) for ESP32-C3 controlling WS2812B NeoPixel LEDs.
+  - LWT (Last Will and Testament) offline detection.
+  - Home Assistant MQTT Discovery for instant entity configuration.
+- **Ultra-lightweight Embedded Firmware**:
+  - Bare-metal Rust (`no_std`, `esp-hal` + `embassy`) for ESP32-S2 controlling WS2812B NeoPixel LEDs.
 
 ---
 
-## 🚦 Agent States & LED Motion Patterns
+## 🚦 State Hierarchy & LED Motion Patterns
 
-When multiple agents or sessions run simultaneously, the highest priority state is promoted to `active_state`:
-
+When multiple agents or terminal sessions run concurrently, **kitt-eye** evaluates their states against a strict priority hierarchy:
 ```text
 error > waiting_input > executing_tool > generating > thinking > done > idle
 ```
 
-| State | Agent Activity | `classic` (All Red 🔴) | `colorful` (Expressive Colors & Motion) |
+| State | Lifecycle Stage | `classic` Motion (Monochrome 🔴) | `colorful` Theme (Color & Motion) |
 |---|---|---|---|
-| `idle` | Standing by | Slow K.I.T.T. Scanner | 🔴 Classic Red Slow K.I.T.T. Scanner |
-| `thinking` | Prompt analysis / reasoning | Center-Out | 🟣 Mystic Purple Center-Out |
-| `generating` | Generating text or code | Fill Sweep | 🟢 Mint Emerald Fill Sweep |
-| `executing_tool` | Executing bash, file, or MCP tool | **Fast K.I.T.T. Scanner (Bouncing)** | 🟠 Vivid Amber **Fast K.I.T.T. Scanner** |
-| `waiting_input` | **Awaiting user approval / input** | Synchronous Blink | 🟡 Warning Yellow Blink |
-| `done` | Task completed | Flash → Solid | 🟢 Spring Lime Flash → Solid |
-| `error` | Tool failed or command error | One-way Comet | 🔴 Crimson Red Comet |
-
-> `done` and `error` states automatically decay back to `idle` after their configured TTLs (defaults: 15s and 60s).
+| `idle` | Idle / awaiting user prompt | Slow K.I.T.T. Scanner (back-and-forth) | 🔴 Classic Red Slow Scanner |
+| `thinking` | Prompt analysis / reasoning | Center-Out Expansion | 🟣 Mystic Purple Center-Out |
+| `generating` | Response / code streaming | Fill Sweep (wave-like fill) | 🟢 Mint Emerald Fill Sweep |
+| `executing_tool` | Running Bash / Edit / MCP tool | **Fast K.I.T.T. Scanner** | 🟠 Vivid Amber **Fast Scanner** |
+| `waiting_input` | **Blocked: needs user approval** | Synchronized Blink (all LEDs flash) | 🟡 Warning Yellow Blink |
+| `done` | Task finished | Flash 3x then hold Solid (auto-reverts to idle) | 🟢 Spring Lime Flash → Solid |
+| `error` | Tool failure or agent error | Comet (trailing tail, auto-reverts to idle) | 🔴 Crimson Red Comet |
 
 ---
 
@@ -57,25 +51,25 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ```text
 [ AI CLI Tools ]
- ├── claude          (~/.claude/settings.json hooks)
- ├── codex           (~/.codex/hooks.json hooks)
- ├── cursor-cli      (~/.cursor/hooks.json hooks)
- └── antigravity-cli (~/.gemini/config/hooks.json hooks)
+ ├── claude          (~/.claude/settings.json hook)
+ ├── codex           (~/.codex/hooks.json hook)
+ ├── cursor-cli      (~/.cursor/hooks.json hook)
+ └── antigravity-cli (~/.gemini/config/hooks.json hook)
          │
          │  Unix Domain Socket (/tmp/kitt-eye.sock)
-         │  Single-line JSON datagram (Fire-and-forget, zero stdout)
+         │  NDJSON datagram (Fire-and-forget, silent stdout)
          ▼
-[ kitt-eye Publisher Daemon (`pub-go`) ]
-   · Multi-session tracking + TTL cleanup + priority aggregation
-   · MQTT QoS 1 Retained publish + LWT
+[ kitt-eye Publisher Daemon (Go) ]
+   · Multi-session state store + TTL janitor + Priority aggregator
+   · MQTT QoS 1 Retained publisher + LWT
          │
-         │  MQTT topics (`kitt-eye/active_state`, etc.)
+         │  MQTT ({prefix}/active_state, etc.)
          ▼
 [ HomeLab MQTT Broker (Home Assistant Mosquitto) ]
          │
          ├──────────────────────────────────────┐
          ▼                                      ▼
-[ ESP32-C3 Firmware (`mcu-rust`) ]     [ Home Assistant ]
+[ ESP32-S2 Firmware (`mcu-rust`) ]     [ Home Assistant ]
  └── WS2812B NeoPixel 8-LED Bar             └── Sensor Dashboard (Auto-Discovery)
 ```
 
@@ -83,14 +77,16 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ## 🔌 Hardware Setup & Wiring
 
+> For detailed pinout diagrams and troubleshooting, see the [Hardware Wiring Guide](docs/hardware_wiring.md).
+
 ### Bill of Materials
-- **ESP32-C3 Development Board** (SuperMini, NodeMCU, or any RISC-V C3 board)
+- **ESP32-S2 Development Board** (S2 Mini, NodeMCU, or any ESP32-S2 board)
 - **WS2812B NeoPixel 8-LED Bar** (strip or stick, default count: 8 LEDs)
 - Jumper wires and a USB-C cable
 
 ### Wiring Diagram
 
-| ESP32-C3 Pin | WS2812B LED Bar Pin | Notes |
+| ESP32-S2 Pin | WS2812B LED Bar Pin | Notes |
 |---|---|---|
 | **5V** (or 3V3) | **VCC / 5V** | 5V recommended for full brightness |
 | **GND** | **GND** | Common ground |
@@ -109,8 +105,8 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
   - macOS: `brew install jq`
   - Debian/Ubuntu: `sudo apt install jq`
 - **`nc` (netcat)** with Unix domain socket support (`nc -U`, built-in on macOS/Linux)
-- **Rust toolchain** (for ESP32-C3 firmware)
-  - `rustup target add riscv32imc-unknown-none-elf`
+- **Rust toolchain** (for ESP32-S2 firmware)
+  - `espup install` (or `esp` toolchain)
   - `cargo install espflash`
 
 ---
@@ -189,11 +185,16 @@ make install-hooks
 
 ---
 
-### 5. Flash ESP32-C3 Firmware
+### 5. Flash MCU Firmware (ESP32-C3 / ESP32-S2)
+
+Navigate to the appropriate directory for your hardware and set up credentials:
 
 ```bash
-cd mcu-rust
-cp .env.example .env
+# For ESP32-C3:
+cd mcu-rust-esp32c3 && cp .env.example .env
+
+# For ESP32-S2:
+cd mcu-rust-esp32s2 && cp .env.example .env
 
 # Edit .env with your Wi-Fi and MQTT credentials:
 # SSID="MyHomeWiFi"
@@ -201,8 +202,10 @@ cp .env.example .env
 # MQTT_BROKER="homeassistant.local"
 # MOTION_THEME="colorful"   # 'classic' or 'colorful'
 
-# Build and flash to connected ESP32-C3 board
-make flash-mcu
+# Flash to connected board:
+make flash-mcu-c3   # Flash connected ESP32-C3 board
+# or
+make flash-mcu-s2   # Flash connected ESP32-S2 board (with --no-stub)
 ```
 
 Now start coding with your favorite AI agent and watch your desk LED bar pulse and scan in real time!
@@ -232,11 +235,14 @@ make build-pub                  # Compile Go publisher -> pub-go/bin/kitt-eye-pu
 make run-pub                    # Run Go publisher daemon with config.yaml
 make build-sub                  # Compile MQTT subscriber example -> pub-go/bin/kitt-eye-sub
 make run-sub                    # Run subscriber example against config.yaml broker
-make build-mcu                  # Build ESP32-C3 Rust firmware
-make flash-mcu                  # Flash firmware via cargo espflash and monitor logs
+make build-mcu                  # Build both ESP32-C3 and ESP32-S2 firmwares
+make build-mcu-c3               # Build ESP32-C3 Rust firmware
+make build-mcu-s2               # Build ESP32-S2 Rust firmware
+make flash-mcu-c3               # Flash ESP32-C3 firmware and monitor logs
+make flash-mcu-s2               # Flash ESP32-S2 firmware (--no-stub) and monitor logs
 make install-hooks              # Install hooks for all 4 AI CLIs
 make uninstall-hooks            # Uninstall hooks and clean up binaries
-make test                       # Run full test suite (Go unit tests + Rust check)
+make test                       # Run full test suite (Go unit tests + both Rust checks)
 make clean                      # Clean build artifacts
 ```
 
