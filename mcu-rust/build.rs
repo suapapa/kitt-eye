@@ -1,7 +1,61 @@
 fn main() {
+    println!("cargo:rerun-if-changed=.env");
+    println!("cargo:rerun-if-changed=.env.local");
+
+    if let Ok(content) = std::fs::read_to_string(".env") {
+        println!("cargo:warning=Loading configuration from .env file");
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some((key, val)) = line.split_once('=') {
+                let key = key.trim();
+                let val = val.trim().trim_matches('"').trim_matches('\'');
+                // SAFETY: build script is single-threaded; set_var is used only here.
+                unsafe {
+                    std::env::set_var(key, val);
+                }
+            }
+        }
+    }
+
     linker_be_nice();
-    // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+
+    // Wi-Fi
+    emit_env("SSID", None, None);
+    emit_env("PASS", Some("PASSWORD"), None);
+
+    // Motion theme (classic = red-only state→motion map)
+    emit_env("MOTION_THEME", None, Some("classic"));
+
+    // MQTT
+    emit_env("MQTT_BROKER", None, None);
+    emit_env("MQTT_PORT", None, Some("1883"));
+    emit_env("MQTT_USER", None, Some(""));
+    emit_env("MQTT_PASS", Some("MQTT_PASSWORD"), Some(""));
+    emit_env("MQTT_TOPIC_PREFIX", None, Some("kitt-eye"));
+    emit_env("MQTT_CLIENT_ID", None, Some("kitt-eye-mcu"));
+}
+
+fn emit_env(primary: &str, alias: Option<&str>, default: Option<&str>) {
+    println!("cargo:rerun-if-env-changed={primary}");
+    if let Some(alias) = alias {
+        println!("cargo:rerun-if-env-changed={alias}");
+    }
+
+    let value = std::env::var(primary)
+        .ok()
+        .filter(|v| !v.is_empty())
+        .or_else(|| alias.and_then(|a| std::env::var(a).ok().filter(|v| !v.is_empty())))
+        .or_else(|| default.map(str::to_string))
+        .unwrap_or_default();
+
+    if value.is_empty() && default.is_none() {
+        eprintln!("cargo:warning={primary} is unset; firmware will use an empty placeholder");
+    }
+    println!("cargo:rustc-env={primary}={value}");
 }
 
 fn linker_be_nice() {
@@ -54,7 +108,6 @@ fn linker_be_nice() {
                 }
                 _ => (),
             },
-            // we don't have anything helpful for "missing-lib" yet
             _ => {
                 std::process::exit(1);
             }

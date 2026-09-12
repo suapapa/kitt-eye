@@ -8,15 +8,15 @@
 
 여러 터미널/세션에서 AI 에이전트를 돌려놓으면 "지금 뭐 하고 있지? 끝나긴 한 건가? 나를 기다리고 있나?"를 확인할 방법이 없습니다. kitt-eye는 방 건너편에서도 한눈에 알 수 있게 해 줍니다.
 
-| LED 패턴 (계획) | 상태 | 의미 |
+| LED 패턴 (`MOTION_THEME=classic`, 전부 🔴) | 상태 | 의미 |
 |---|---|---|
-| 🔴 K.I.T.T. 스캐너 (좌우 왕복) | `executing_tool` | 도구/쉘/파일 작업 실행 중 |
-| 🔵 Breathing (호흡) | `idle` | 대기 |
-| 🟣 Pulsing (점멸) | `thinking` | 추론 중 |
-| 🔵 Fast Sweep | `generating` | 응답/코드 생성 중 |
-| 🟠 점멸 | `waiting_input` | **사용자 확인/입력 대기** |
-| 🟢 Solid / Rapid Green Flash | `done` | 완료 |
-| 🔴 Blinking Red | `error` | 실패 |
+| Breathing (호흡) | `idle` | 대기 |
+| Center-Out (중앙→양끝) | `thinking` | 추론 중 |
+| Fill Sweep (채움 웨이브) | `generating` | 응답/코드 생성 중 |
+| K.I.T.T. 스캐너 (좌우 왕복) | `executing_tool` | 도구/쉘/파일 작업 실행 중 |
+| Blink (동기 점멸) | `waiting_input` | **사용자 확인/입력 대기** |
+| Flash → Solid | `done` | 완료 |
+| Comet (한 방향 혜성) | `error` | 실패 |
 
 ## 시스템 아키텍처
 
@@ -80,7 +80,9 @@ kitt-eye/
 │       ├── publish/          # Sink 인터페이스 + dry-run(stdout) sink
 │       └── mqtt/             # paho 기반 MQTT 클라이언트 (retained, LWT, HA Discovery)
 └── mcu-rust/                 # ESP32-C3 Rust 펌웨어
-    └── Cargo.toml            # esp-idf-svc / smart-leds / ws2812-esp32-rmt-driver
+    └── Cargo.toml            # esp-hal / embassy / ws2812-spi
+        src/                  # LED 패턴 엔진 + Wi-Fi/MQTT 펌웨어
+        .env.example          # SSID / MOTION_THEME / MQTT_* 템플릿
 ```
 
 ## 구현 현황
@@ -92,7 +94,7 @@ kitt-eye/
 | 설정 / Makefile | ✅ `config.example.yaml` + `make` 타깃 (`install-hooks-*` 포함) |
 | 공통 훅 전송기 (`hooks/common/send_event.sh`) | ✅ v1.1 — `session_id`/`event`, `jq`로 JSON 이스케이프, stdout 무출력 |
 | CLI별 훅 스크립트 (`hooks/{claude,codex,cursor-cli,antigravity-cli}/`) | ✅ bash+jq 관찰자 훅 + 스니펫 + `make install-hooks` 멱등 병합 |
-| ESP32-C3 펌웨어 (`mcu-rust`) | 🚧 매니페스트(`Cargo.toml`)만 존재, `src/` 없음 — 현재 빌드 불가 |
+| ESP32-C3 펌웨어 (`mcu-rust`) | ✅ 고전 🔴 모션 7종 + Wi-Fi/MQTT(`active_state`) — `.env`로 SSID/테마/브로커 주입 |
 | Home Assistant 연동 | ✅ 퍼블리셔 측 MQTT Discovery 발행 지원 (`homeassistant.discovery: true`) |
 
 ## 빠른 시작
@@ -193,14 +195,27 @@ make uninstall-hooks
 
 이벤트 매핑·stdout 계약 상세는 [PLAN.md](./PLAN.md) §4.4–4.7.
 
-### 4) ESP32-C3 펌웨어 (예정)
+### 4) ESP32-C3 펌웨어
 
-`mcu-rust`는 `Cargo.toml`만 올라간 스캐폴딩 상태입니다. 구현되면 `espup`/`riscv32imc-esp-espidf` 툴체인 아래 다음 명령으로 빌드·플래시합니다:
+`mcu-rust`는 esp-hal + embassy Wi-Fi/MQTT로 `kitt-eye/active_state`를 구독해 LED 모션을 바꿉니다. 설정은 **컴파일 타임 `.env` 주입**입니다.
 
 ```sh
-make build-mcu   # cargo build --release (riscv32imc-esp-espidf)
+cd mcu-rust
+cp .env.example .env
+# .env 편집: SSID, PASS, MQTT_BROKER, MQTT_USER/PASS, MOTION_THEME=classic
+make build-mcu   # cargo build --release
 make flash-mcu   # cargo espflash flash --release --monitor
 ```
+
+| `.env` 키 | 설명 |
+|---|---|
+| `SSID` / `PASS` | 연결할 Wi-Fi AP |
+| `MOTION_THEME` | 모션 테마 (`classic` = 전부 빨강, 상태별 모션) |
+| `MQTT_BROKER` / `MQTT_PORT` | 브로커 호스트(또는 IPv4)와 포트 |
+| `MQTT_USER` / `MQTT_PASS` | 브로커 인증 (비우면 anonymous) |
+| `MQTT_TOPIC_PREFIX` | 기본 `kitt-eye` → 구독 토픽 `{prefix}/active_state` |
+
+배선: WS2812 DIN ← GPIO6 (SPI MOSI), SCK=GPIO4(미사용).
 
 ## MQTT 토픽 규격
 

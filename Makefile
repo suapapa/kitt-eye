@@ -75,8 +75,8 @@ uninstall-hooks:
 test:
 	@echo "==> Testing Go publisher..."
 	cd pub-go && go test ./...
-	@echo "==> Testing Rust firmware..."
-	cd mcu-rust && cargo test --lib || true
+	@echo "==> Checking Rust firmware..."
+	cd mcu-rust && cargo check --release
 
 clean:
 	rm -rf pub-go/bin mcu-rust/target

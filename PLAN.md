@@ -135,17 +135,21 @@ kitt-eye/
 
 ### 4.3. MCU ESP32-C3 Rust 펌웨어 (`mcu-rust`)
 1. **기술 스택**
-   - **프레임워크**: `esp-idf-svc` (안정적인 Wi-Fi, TLS/TCP 소켓 및 `EspMqttClient` 제공)
-   - **타깃 아키텍처**: `riscv32imc-esp-espidf` (ESP32-C3 RISC-V 코어)
-   - **LED 드라이버**: `smart-leds` + `esp-idf-hal::rmt` (WS2812B 스트립/단일 LED 구동)
+   - **프레임워크**: `esp-hal` + `esp-rtos` / Embassy (`esp-radio` Wi-Fi, `embassy-net`)
+   - **타깃 아키텍처**: `riscv32imc-unknown-none-elf` (ESP32-C3)
+   - **LED 드라이버**: `smart-leds` + `ws2812-spi` (SPI MOSI → WS2812B)
+   - **설정**: `mcu-rust/.env` (`SSID`, `PASS`, `MOTION_THEME`, `MQTT_BROKER`, …)
 2. **동작 시나리오**
    - Wi-Fi 부팅 및 HA Mosquitto 브로커 접속 (`kitt-eye/#` 토픽 구독).
-   - 수신된 에이전트 상태에 따라 비동기 FreeRTOS 태스크에서 LED 패턴 렌더링:
-     - **K.I.T.T. Scanner (Red 좌우 왕복)**: `executing_tool` (도구 실행 중)
-     - **Breathing (Cyan/Blue 서서히 밝아졌다 어두워짐)**: `idle` (대기 상태)
-     - **Pulsing (Amber/Purple 점멸)**: `thinking` (추론 중)
-     - **Solid Green / Rapid Green Flash**: `done` (완료 알림)
-     - **Blinking Red**: `error` (실패 알림)
+  - 수신된 에이전트 상태에 따라 LED 패턴 렌더링 (`MOTION_THEME=classic`, **전부 Red**):
+     - **Breathing**: `idle`
+     - **Center-Out**: `thinking`
+     - **Fill Sweep**: `generating`
+     - **K.I.T.T. Scanner (좌우 왕복)**: `executing_tool`
+     - **Blink**: `waiting_input`
+     - **Flash → Solid**: `done`
+     - **Comet (한 방향 혜성)**: `error`
+   - Wi-Fi / MQTT / 테마는 `mcu-rust/.env` → `build.rs` → `env!`로 컴파일 타임 주입.
 
 ### 4.4. Claude Code (`claude`) 훅 연동
 

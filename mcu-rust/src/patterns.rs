@@ -1,0 +1,270 @@
+//! Red-only LED motion patterns and engine.
+
+use smart_leds::RGB8;
+
+use crate::state::AgentState;
+use crate::theme::MotionTheme;
+
+/// Number of LEDs on the strip (KnightRider reference used 12).
+pub const LED_COUNT: usize = 8;
+
+/// Default head color (KnightRider: red).
+pub const BASE_COLOR: RGB8 = RGB8::new(255, 0, 0);
+
+/// Fade retention per step (0..=255). Higher = slower trail fade.
+pub const FADE_FACTOR: u8 = 180;
+
+/// Default milliseconds between animation steps.
+pub const ANIM_SPEED_MS: u32 = 35;
+
+/// Pattern identifiers (classic theme maps one state → one pattern).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PatternId {
+    Breathing,
+    CenterOut,
+    FillSweep,
+    KittScanner,
+    Blink,
+    Flash,
+    Comet,
+}
+
+/// Owns the active pattern and shared pixel buffer.
+pub struct LedEngine {
+    theme: MotionTheme,
+    state: AgentState,
+    pattern: PatternId,
+    pixels: [RGB8; LED_COUNT],
+    /// Pattern-local phase / position.
+    phase: u16,
+    /// Direction for bounce/sweep (-1 / +1) encoded as i8.
+    dir: i8,
+    /// Extra counter (e.g. flash count).
+    aux: u8,
+}
+
+impl LedEngine {
+    pub const fn new(theme: MotionTheme) -> Self {
+        let state = AgentState::Idle;
+        Self {
+            theme,
+            state,
+            pattern: theme.pattern_for(state),
+            pixels: [RGB8::new(0, 0, 0); LED_COUNT],
+            phase: 0,
+            dir: 1,
+            aux: 0,
+        }
+    }
+
+    pub const fn state(&self) -> AgentState {
+        self.state
+    }
+
+    pub const fn pattern(&self) -> PatternId {
+        self.pattern
+    }
+
+    /// Switch agent state (and thus pattern) if changed.
+    pub fn set_state(&mut self, state: AgentState) {
+        if state == self.state {
+            return;
+        }
+        self.state = state;
+        self.pattern = self.theme.pattern_for(state);
+        self.reset_pattern();
+    }
+
+    fn reset_pattern(&mut self) {
+        self.pixels = [RGB8::new(0, 0, 0); LED_COUNT];
+        self.phase = 0;
+        self.dir = 1;
+        self.aux = 0;
+    }
+
+    /// Advance one animation frame; returns the pixel buffer to write.
+    pub fn step(&mut self) -> &[RGB8; LED_COUNT] {
+        match self.pattern {
+            PatternId::Breathing => self.step_breathing(),
+            PatternId::CenterOut => self.step_center_out(),
+            PatternId::FillSweep => self.step_fill_sweep(),
+            PatternId::KittScanner => self.step_kitt_scanner(),
+            PatternId::Blink => self.step_blink(),
+            PatternId::Flash => self.step_flash(),
+            PatternId::Comet => self.step_comet(),
+        }
+        &self.pixels
+    }
+
+    fn step_breathing(&mut self) {
+        // Triangle wave 0..255..0
+        let p = self.phase as u8;
+        let level = if p < 128 {
+            p.saturating_mul(2)
+        } else {
+            255u8.saturating_sub(p.saturating_sub(128).saturating_mul(2))
+        };
+        let c = scale_color(BASE_COLOR, level);
+        self.pixels = [c; LED_COUNT];
+        self.phase = self.phase.wrapping_add(2);
+        if self.phase >= 256 {
+            self.phase = 0;
+        }
+    }
+
+    fn step_center_out(&mut self) {
+        fade_all(&mut self.pixels, FADE_FACTOR);
+        // Radius expands 0 .. LED_COUNT/2 then contracts.
+        let half = (LED_COUNT / 2) as u16;
+        let cycle = half * 2;
+        let t = self.phase % cycle;
+        let radius = if t <= half { t } else { cycle - t };
+
+        let mid_lo = (LED_COUNT / 2).saturating_sub(1);
+        let mid_hi = LED_COUNT / 2;
+        for i in 0..LED_COUNT {
+            let dist = if i <= mid_lo {
+                mid_lo - i
+            } else {
+                i - mid_hi
+            };
+            if dist as u16 == radius {
+                self.pixels[i] = BASE_COLOR;
+            } else if dist as u16 + 1 == radius {
+                self.pixels[i] = scale_color(BASE_COLOR, 100);
+            }
+        }
+        self.phase = self.phase.wrapping_add(1);
+    }
+
+    fn step_fill_sweep(&mut self) {
+        let fill_to = (self.phase as usize) % (LED_COUNT + 1);
+        for i in 0..LED_COUNT {
+            self.pixels[i] = if i < fill_to {
+                BASE_COLOR
+            } else {
+                RGB8::new(0, 0, 0)
+            };
+        }
+        // Pause fully filled for a beat, then clear and restart.
+        if fill_to >= LED_COUNT {
+            self.aux = self.aux.saturating_add(1);
+            if self.aux >= 8 {
+                self.phase = 0;
+                self.aux = 0;
+            }
+        } else {
+            self.phase = self.phase.wrapping_add(1);
+            self.aux = 0;
+        }
+    }
+
+    fn step_kitt_scanner(&mut self) {
+        fade_all(&mut self.pixels, FADE_FACTOR);
+        let pos = (self.phase as usize).min(LED_COUNT - 1);
+        self.pixels[pos] = BASE_COLOR;
+
+        let next = pos as i8 + self.dir;
+        if next >= (LED_COUNT as i8 - 1) {
+            self.phase = (LED_COUNT - 1) as u16;
+            self.dir = -1;
+        } else if next <= 0 {
+            self.phase = 0;
+            self.dir = 1;
+        } else {
+            self.phase = next as u16;
+        }
+    }
+
+    fn step_blink(&mut self) {
+        // ~350ms on / off at 35ms tick → toggle every 10 frames
+        let on = (self.phase / 10) % 2 == 0;
+        let c = if on {
+            BASE_COLOR
+        } else {
+            RGB8::new(0, 0, 0)
+        };
+        self.pixels = [c; LED_COUNT];
+        self.phase = self.phase.wrapping_add(1);
+    }
+
+    fn step_flash(&mut self) {
+        // 6 rapid flashes then solid
+        const FLASHES: u8 = 6;
+        if self.aux < FLASHES * 2 {
+            let on = self.aux % 2 == 0;
+            let c = if on {
+                BASE_COLOR
+            } else {
+                RGB8::new(0, 0, 0)
+            };
+            self.pixels = [c; LED_COUNT];
+            self.aux = self.aux.saturating_add(1);
+        } else {
+            self.pixels = [BASE_COLOR; LED_COUNT];
+        }
+    }
+
+    fn step_comet(&mut self) {
+        fade_all(&mut self.pixels, 140); // longer trail
+        let pos = (self.phase as usize) % LED_COUNT;
+        self.pixels[pos] = BASE_COLOR;
+        // Soft secondary head
+        let prev = if pos == 0 { LED_COUNT - 1 } else { pos - 1 };
+        self.pixels[prev] = scale_color(BASE_COLOR, 160);
+        self.phase = self.phase.wrapping_add(1);
+    }
+}
+
+#[inline]
+fn scale8(value: u8, scale: u8) -> u8 {
+    ((u16::from(value) * u16::from(scale)) / 255) as u8
+}
+
+#[inline]
+fn scale_color(c: RGB8, scale: u8) -> RGB8 {
+    RGB8::new(scale8(c.r, scale), scale8(c.g, scale), scale8(c.b, scale))
+}
+
+fn fade_all(pixels: &mut [RGB8; LED_COUNT], factor: u8) {
+    for pixel in pixels {
+        pixel.r = scale8(pixel.r, factor);
+        pixel.g = scale8(pixel.g, factor);
+        pixel.b = scale8(pixel.b, factor);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn engine_switches_pattern_with_state() {
+        let mut eng = LedEngine::new(MotionTheme::Classic);
+        assert_eq!(eng.pattern(), PatternId::Breathing);
+        eng.set_state(AgentState::ExecutingTool);
+        assert_eq!(eng.pattern(), PatternId::KittScanner);
+        eng.set_state(AgentState::Error);
+        assert_eq!(eng.pattern(), PatternId::Comet);
+    }
+
+    #[test]
+    fn steps_do_not_panic() {
+        let mut eng = LedEngine::new(MotionTheme::Classic);
+        for state in [
+            AgentState::Idle,
+            AgentState::Thinking,
+            AgentState::Generating,
+            AgentState::ExecutingTool,
+            AgentState::WaitingInput,
+            AgentState::Done,
+            AgentState::Error,
+        ] {
+            eng.set_state(state);
+            for _ in 0..64 {
+                let frame = eng.step();
+                assert_eq!(frame.len(), LED_COUNT);
+            }
+        }
+    }
+}

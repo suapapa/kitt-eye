@@ -3,6 +3,7 @@ edition      = "2024"
 name         = "kitt-eye"
 rust-version = "1.88"
 version      = "0.1.0"
+license      = "MIT"
 
 [[bin]]
 name = "kitt-eye"
@@ -10,8 +11,50 @@ path = "./src/bin/main.rs"
 
 [dependencies]
 esp-hal = { version = "~1.1.0", features = ["esp32c3", "unstable"] }
+esp-rtos = { version = "0.3.0", features = [
+  "embassy",
+  "esp-alloc",
+  "esp-radio",
+  "esp32c3",
+] }
 esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32c3"] }
+
+embassy-net = { version = "0.9.1", features = [
+  "dhcpv4",
+  "dns",
+  "medium-ethernet",
+  "tcp",
+  "udp",
+] }
+embassy-executor = { version = "0.10.0", features = [] }
+embassy-time = "0.5.0"
+embassy-sync = "0.7.0"
+esp-alloc = "0.10.0"
+esp-radio = { version = "0.18.0", features = [
+  "esp-alloc",
+  "esp32c3",
+  "unstable",
+  "wifi",
+] }
+smoltcp = { version = "0.13.0", default-features = false, features = [
+  "medium-ethernet",
+  "multicast",
+  "proto-dhcpv4",
+  "proto-dns",
+  "proto-ipv4",
+  "socket-dns",
+  "socket-icmp",
+  "socket-raw",
+  "socket-tcp",
+  "socket-udp",
+] }
+
 critical-section = "1.2.0"
+static_cell = "2.1.1"
+heapless = "0.8"
+esp-println = { version = "0.16", features = ["esp32c3", "log-04"] }
+log = "0.4"
+embedded-io-async = "0.7"
 
 smart-leds = "0.4.0"
 # mosi_idle_high + reset_single_transaction: crate README fix for
@@ -21,14 +64,13 @@ ws2812-spi = { version = "0.5.1", features = [
   "reset_single_transaction",
 ] }
 
-# For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]
 # ws2812-spi timing is sensitive; crate README recommends opt-level 3 (or --release).
 # "s" can produce full-white / stuck first-LED symptoms.
 opt-level = 3
 
 [profile.release]
-codegen-units = 1     # LLVM can perform better optimizations using a single thread
-debug         = 2     # prefer slower builds but better debugging experience
+codegen-units = 1
+debug         = 2
 lto           = 'fat'
 opt-level     = 3
