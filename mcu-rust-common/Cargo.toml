@@ -1,0 +1,10 @@
+[package]
+name = "kitt-eye-common"
+version = "0.1.0"
+edition = "2024"
+autobins = false
+
+[dependencies]
+smart-leds = "0.4.0"
+embedded-io-async = "0.7"
+heapless = "0.8"

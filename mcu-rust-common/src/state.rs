@@ -52,3 +52,37 @@ impl AgentState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_mqtt_states() {
+        assert_eq!(AgentState::from_mqtt(b"idle"), Some(AgentState::Idle));
+        assert_eq!(AgentState::from_mqtt(b"thinking"), Some(AgentState::Thinking));
+        assert_eq!(AgentState::from_mqtt(b"generating"), Some(AgentState::Generating));
+        assert_eq!(AgentState::from_mqtt(b"executing_tool"), Some(AgentState::ExecutingTool));
+        assert_eq!(AgentState::from_mqtt(b"waiting_input"), Some(AgentState::WaitingInput));
+        assert_eq!(AgentState::from_mqtt(b"done"), Some(AgentState::Done));
+        assert_eq!(AgentState::from_mqtt(b"error"), Some(AgentState::Error));
+        assert_eq!(AgentState::from_mqtt(b"invalid"), None);
+        assert_eq!(AgentState::from_mqtt(b""), None);
+    }
+
+    #[test]
+    fn roundtrip_u8() {
+        for v in 0..=6 {
+            let state = AgentState::from_u8(v);
+            assert_eq!(state as u8, v);
+        }
+        assert_eq!(AgentState::from_u8(99), AgentState::Idle);
+    }
+
+    #[test]
+    fn str_representation() {
+        assert_eq!(AgentState::Idle.as_str(), "idle");
+        assert_eq!(AgentState::ExecutingTool.as_str(), "executing_tool");
+    }
+}
+

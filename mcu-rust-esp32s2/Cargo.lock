@@ -1206,11 +1206,21 @@ dependencies = [
  "esp-radio",
  "esp-rtos",
  "heapless 0.8.0",
+ "kitt-eye-common",
  "log",
  "smart-leds",
  "smoltcp",
  "static_cell",
  "ws2812-spi",
+]
+
+[[package]]
+name = "kitt-eye-common"
+version = "0.1.0"
+dependencies = [
+ "embedded-io-async 0.7.0",
+ "heapless 0.8.0",
+ "smart-leds",
 ]
 
 [[package]]

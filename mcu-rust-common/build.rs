@@ -1,27 +1,45 @@
 fn main() {
     println!("cargo:rerun-if-changed=.env");
     println!("cargo:rerun-if-changed=.env.local");
+    println!("cargo:rerun-if-changed=../.env");
+    println!("cargo:rerun-if-changed=../mcu-rust-esp32c3/.env");
+    println!("cargo:rerun-if-changed=../mcu-rust-esp32s2/.env");
 
-    if let Ok(content) = std::fs::read_to_string(".env") {
-        println!("cargo:warning=Loading configuration from .env file");
-        for line in content.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            if let Some((key, val)) = line.split_once('=') {
-                let key = key.trim();
-                let val = val.trim().trim_matches('"').trim_matches('\'');
-                // SAFETY: build script is single-threaded; set_var is used only here.
-                unsafe {
-                    std::env::set_var(key, val);
+    let candidate_env_paths = [
+        ".env",
+        "../.env",
+        "../mcu-rust-esp32c3/.env",
+        "../mcu-rust-esp32s2/.env",
+    ];
+
+    for path in &candidate_env_paths {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            println!("cargo:warning=Loading configuration from {path} file");
+            for line in content.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                if let Some((key, val)) = line.split_once('=') {
+                    let key = key.trim();
+                    let val = val.trim().trim_matches('"').trim_matches('\'');
+                    // SAFETY: build script is single-threaded; set_var is used only here.
+                    unsafe {
+                        std::env::set_var(key, val);
+                    }
                 }
             }
+            break;
         }
     }
 
-    linker_be_nice();
-    println!("cargo:rustc-link-arg=-Tlinkall.x");
+    let target = std::env::var("TARGET").unwrap_or_default();
+    if target.contains("none-elf") {
+        if target.contains("riscv32") {
+            linker_be_nice();
+        }
+        println!("cargo:rustc-link-arg=-Tlinkall.x");
+    }
 
     // Wi-Fi
     emit_env("SSID", None, None);

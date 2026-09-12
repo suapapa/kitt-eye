@@ -24,7 +24,7 @@ use esp_hal::{
 use esp_println::println;
 use esp_radio::wifi::{Config as WifiConfig, WifiController, sta::StationConfig};
 use heapless::String;
-use kitt_eye::{
+use kitt_eye_common::{
     config::{
         self, MQTT_BROKER, MQTT_CLIENT_ID, MQTT_PASS, MQTT_TOPIC_PREFIX, MQTT_USER, MOTION_THEME,
         PASS, SSID,
@@ -292,7 +292,7 @@ async fn resolve_broker(stack: Stack<'_>) -> Option<embassy_net::IpAddress> {
 #[embassy_executor::task]
 async fn connection(mut controller: WifiController<'static>) {
     println!("wifi connection task");
-    // Lower TX power for better WPA auth on small ESP32 boards.
+    // Lower TX power for better WPA auth on small ESP32 boards (ESP32-C3 Super Mini / S2 Mini).
     const TX_POWER: i8 = 34;
     loop {
         if controller.is_connected() {

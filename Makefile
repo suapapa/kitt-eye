@@ -96,10 +96,12 @@ uninstall-hooks:
 test:
 	@echo "==> Testing Go publisher..."
 	cd pub-go && go test ./...
+	@echo "==> Testing MCU common logic..."
+	cd mcu-rust-common && cargo test
 	@echo "==> Checking ESP32-C3 Rust firmware..."
 	cd mcu-rust-esp32c3 && cargo check --release
 	@echo "==> Checking ESP32-S2 Rust firmware..."
 	cd mcu-rust-esp32s2 && cargo check --release
 
 clean:
-	rm -rf pub-go/bin mcu-rust-esp32c3/target mcu-rust-esp32s2/target
+	rm -rf pub-go/bin mcu-rust-common/target mcu-rust-esp32c3/target mcu-rust-esp32s2/target

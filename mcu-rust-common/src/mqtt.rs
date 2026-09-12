@@ -280,3 +280,23 @@ pub fn active_state_topic(prefix: &str, out: &mut heapless::String<64>) -> Resul
         .map_err(|_| MqttError::Buffer)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_active_state_topic() {
+        let mut s: heapless::String<64> = heapless::String::new();
+        active_state_topic("kitt-eye", &mut s).unwrap();
+        assert_eq!(s.as_str(), "kitt-eye/active_state");
+    }
+
+    #[test]
+    fn test_push_mqtt_string() {
+        let mut buf: Vec<u8, 32> = Vec::new();
+        push_mqtt_string(&mut buf, "test").unwrap();
+        assert_eq!(&buf[..], &[0x00, 0x04, b't', b'e', b's', b't']);
+    }
+}
+

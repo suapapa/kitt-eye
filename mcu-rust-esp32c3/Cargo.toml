@@ -4,12 +4,14 @@ name         = "kitt-eye"
 rust-version = "1.88"
 version      = "0.1.0"
 license      = "MIT"
+build        = "../mcu-rust-common/build.rs"
 
 [[bin]]
 name = "kitt-eye"
-path = "./src/bin/main.rs"
+path = "../mcu-rust-common/src/app_main.rs"
 
 [dependencies]
+kitt-eye-common = { path = "../mcu-rust-common" }
 esp-hal = { version = "~1.1.0", features = ["esp32c3", "unstable"] }
 esp-rtos = { version = "0.3.0", features = [
   "embassy",

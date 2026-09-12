@@ -57,14 +57,16 @@ kitt-eye/
 │       ├── state/           # Session state store, TTLs, and aggregator
 │       ├── publish/         # Sink interface (MQTT & dry-run stdout sinks)
 │       └── mqtt/            # Paho MQTT v3 client, LWT, and HA discovery
-├── mcu-rust-esp32c3/        # ESP32-C3 Rust Firmware (RISC-V, nightly toolchain)
-│   ├── Cargo.toml           # esp-hal (~1.1), esp-rtos, esp-radio, esp32c3 features
-│   ├── .cargo/config.toml   # riscv32imc-unknown-none-elf target
-│   └── src/                 # Embassy tasks, Wi-Fi, MQTT client, LED engine
-└── mcu-rust-esp32s2/        # ESP32-S2 Rust Firmware (Xtensa, esp toolchain)
-    ├── Cargo.toml           # esp-hal (~1.1), esp-rtos, esp-radio, esp32s2 features
-    ├── .cargo/config.toml   # xtensa-esp32s2-none-elf target (--no-stub runner)
-    └── src/                 # Embassy tasks, Wi-Fi, MQTT client, LED engine
+├── mcu-rust-common/        # Shared MCU logic (no_std library: state, theme, patterns, mqtt, app_main)
+│   ├── Cargo.toml           # Core dependencies (smart-leds, embedded-io-async, heapless)
+│   ├── build.rs             # Unified build script (loads .env, sets cargo:rustc-env, linker flags)
+│   └── src/                 # lib.rs, state.rs, theme.rs, patterns.rs, mqtt.rs, config.rs, app_main.rs
+├── mcu-rust-esp32c3/        # ESP32-C3 Firmware Package (RISC-V, nightly toolchain)
+│   ├── Cargo.toml           # References mcu-rust-common, esp-hal (~1.1) with esp32c3 feature
+│   └── .cargo/config.toml   # riscv32imc-unknown-none-elf target, espflash runner
+└── mcu-rust-esp32s2/        # ESP32-S2 Firmware Package (Xtensa, esp toolchain)
+    ├── Cargo.toml           # References mcu-rust-common, esp-hal (~1.1) with esp32s2 feature
+    └── .cargo/config.toml   # xtensa-esp32s2-none-elf target, espflash --no-stub runner
 ```
 
 ---
@@ -88,8 +90,9 @@ make flash-mcu-s2       # Flash ESP32-S2 firmware via cargo espflash (--no-stub)
 # Run test suite
 make test               # Runs:
                         # 1. cd pub-go && go test ./...
-                        # 2. cd mcu-rust-esp32c3 && cargo check --release
-                        # 3. cd mcu-rust-esp32s2 && cargo check --release
+                        # 2. cd mcu-rust-common && cargo test
+                        # 3. cd mcu-rust-esp32c3 && cargo check --release
+                        # 4. cd mcu-rust-esp32s2 && cargo check --release
 
 # Local testing without MQTT broker (Dry-run mode)
 make run-pub            # Runs publisher using config.yaml (stdout JSON sink if broker is "")
@@ -128,29 +131,30 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
 
 ---
 
-### 4.2. Embedded Firmwares (`mcu-rust-esp32c3/` & `mcu-rust-esp32s2/`)
+### 4.2. Embedded Firmwares (`mcu-rust-common/`, `mcu-rust-esp32c3/` & `mcu-rust-esp32s2/`)
 
-> [!IMPORTANT]
-> **MANDATORY DUAL-DIRECTORY MODIFICATION RULE**:
-> Both ESP32-C3 and ESP32-S2 are actively supported. When modifying MCU firmware logic (e.g. `patterns.rs`, `theme.rs`, `state.rs`, `mqtt.rs`, `main.rs`, `.env` keys, or dependencies), **modifications MUST be made in BOTH directories**:
-> 1. `mcu-rust-esp32c3/`
-> 2. `mcu-rust-esp32s2/`
+> [!TIP]
+> **SINGLE SOURCE OF TRUTH IN `mcu-rust-common/`**:
+> All MCU application logic, patterns, themes, state models, MQTT client, and main firmware loop (`app_main.rs`) are centralized in **`mcu-rust-common/`**.
+> `mcu-rust-esp32c3/` and `mcu-rust-esp32s2/` are thin board packages that specify chip features (`esp32c3` vs `esp32s2`), target triples, and flash runners.
 >
-> Never apply a feature or bugfix to only one MCU directory. Always verify both builds using `make test` (which executes `cargo check --release` in both directories).
+> When making changes to firmware logic, edit only files in `mcu-rust-common/`!
+> Always verify all builds using `make test` (which executes `cargo test` in `mcu-rust-common` and `cargo check --release` in both board directories).
 
 - **Architecture & Toolchain Differences**:
-  | Property | `mcu-rust-esp32c3/` | `mcu-rust-esp32s2/` |
-  |---|---|---|
-  | **Target Triple** | `riscv32imc-unknown-none-elf` | `xtensa-esp32s2-none-elf` |
-  | **Rust Toolchain** | `nightly` (upstream) | `esp` (via `espup`, path in `~/export-esp.sh`) |
-  | **`Cargo.toml` Features** | `features = ["esp32c3", ...]` | `features = ["esp32s2", ...]` |
-  | **Linker** | `rust-lld` (supports `linker_be_nice`) | `xtensa-esp32s2-elf-gcc` (no LLD scripts) |
-  | **Flashing (`espflash`)** | Standard stub | **Must use `--no-stub`** (Native USB CDC drops with stub) |
-  | **Runner in `.cargo`** | `espflash flash --monitor --chip esp32c3` | `espflash flash --monitor --chip esp32s2 --no-stub` |
+  | Property | `mcu-rust-common/` | `mcu-rust-esp32c3/` | `mcu-rust-esp32s2/` |
+  |---|---|---|---|
+  | **Role** | Core logic & app runner | Thin ESP32-C3 binary wrapper | Thin ESP32-S2 binary wrapper |
+  | **Target Triple** | Host / any `no_std` target | `riscv32imc-unknown-none-elf` | `xtensa-esp32s2-none-elf` |
+  | **Rust Toolchain** | `stable` / `nightly` | `nightly` (upstream) | `esp` (via `espup`, path in `~/export-esp.sh`) |
+  | **`Cargo.toml` Features** | `no_std` dependencies only | `features = ["esp32c3", ...]` | `features = ["esp32s2", ...]` |
+  | **Linker** | Host linker | `rust-lld` (supports `linker_be_nice`) | `xtensa-esp32s2-elf-gcc` (no LLD scripts) |
+  | **Flashing (`espflash`)** | N/A (library) | Standard stub | **Must use `--no-stub`** (Native USB CDC drops with stub) |
+  | **Runner in `.cargo`** | N/A | `espflash flash --monitor --chip esp32c3` | `espflash flash --monitor --chip esp32s2 --no-stub` |
 
-- **CRITICAL Build Rule**:
-  - **DO NOT run bare `cargo test`** inside either MCU directory or target the host platform (`aarch64-apple-darwin` / `x86_64`). `esp-hal` build scripts deliberately panic on non-ESP host platforms.
-  - **Always verify Rust code using `make test`** or `cd <mcu-dir> && cargo check --release`.
+- **Testing Rules**:
+  - `mcu-rust-common/` has **no direct HAL dependencies**, so its unit tests run natively on the host via `cd mcu-rust-common && cargo test`.
+  - In `mcu-rust-esp32c3/` and `mcu-rust-esp32s2/`, do NOT run bare host tests; verify with `cargo check --release` or `make test`.
 - **Hardware Wiring (Both Boards)**:
   - WS2812 DIN: `GPIO6` (SPI2 MOSI)
   - SCK: `GPIO4` (Unused by WS2812, reserved for SPI master init)
