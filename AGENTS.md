@@ -33,7 +33,8 @@ kitt-eye/
 ├── config.example.yaml      # Configuration template for Go publisher
 ├── config.yaml              # Local publisher config (git-ignored or user-configured)
 ├── PLAN.md                  # Comprehensive architectural specification & protocol design
-├── README.md                # User-facing guide & hardware wiring documentation
+├── README.md                # User-facing guide (English)
+├── README_ko.md             # User-facing guide (Korean)
 ├── AGENTS.md                # Developer & agent guidelines (this file)
 ├── hooks/                   # Lifecycle hooks for AI CLI tools
 │   ├── common/
@@ -77,6 +78,7 @@ Always run these from the repository root:
 make build-pub          # Compile Go publisher binary (pub-go/bin/kitt-eye-pub)
 make build-sub          # Compile Go MQTT subscriber utility (pub-go/bin/kitt-eye-sub)
 make build-mcu          # Compile ESP32-C3 Rust firmware (release)
+make flash-mcu          # Flash ESP32-C3 firmware via cargo espflash
 
 # Run test suite
 make test               # Runs:
@@ -111,8 +113,8 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
   error > waiting_input > executing_tool > generating > thinking > done > idle
   ```
 - **TTL & Expiration**:
-  - `done` and `error` states automatically revert to `idle` after their configured TTLs (default: 10s for done, 30s for error).
-  - Stale sessions that stop emitting events are pruned by the janitor routine (default: 600s).
+  - `done` and `error` states automatically revert to `idle` after their configured TTLs (defaults: 15s for done, 60s for error).
+  - Stale sessions that stop emitting events are pruned by the janitor routine (default: 300s).
 - **Dry-Run Mode**:
   - When `mqtt.broker` in `config.yaml` is empty (`""`), the daemon routes events through `DryRunSink`, printing NDJSON events to `stdout`. Do not break this fallback path.
 - **Testing**:
@@ -125,11 +127,11 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
 - **Target Architecture**: `riscv32imc-unknown-none-elf` (`no_std`, `build-std = ["alloc", "core"]`).
 - **Frameworks**: `esp-hal` (v1.1+), Embassy async tasks (`esp-rtos`, `esp-radio`, `embassy-net`), `smart-leds`, `ws2812-spi`.
 - **CRITICAL Build Rule**:
-  - **DO NOT run bare `cargo test`** inside `mcu-rust/` or target the host (`aarch64-apple-darwin` / `x86_64`). `esp-hal` build scripts deliberately panic on non-ESP host platforms, and bare-metal targets lack the standard test harness.
+  - **DO NOT run bare `cargo test`** inside `mcu-rust/` or target the host platform (`aarch64-apple-darwin` / `x86_64`). `esp-hal` build scripts deliberately panic on non-ESP host platforms.
   - **Always verify Rust code using `cargo check --release`** (or `make test`).
 - **Hardware Wiring**:
   - WS2812 DIN: `GPIO6` (SPI2 MOSI)
-  - SCK: `GPIO4` (Unused by WS2812, but reserved for SPI master init)
+  - SCK: `GPIO4` (Unused by WS2812, reserved for SPI master init)
   - Default strip length: `LED_COUNT = 8` (`patterns::LED_COUNT`)
 - **Compile-Time Configuration**:
   - Firmware configuration is statically injected at compile time via `.env` -> `build.rs` -> `env!()` macros (in `src/config.rs`).
@@ -145,7 +147,7 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
     - `error` → Crimson Red (`RGB8(255, 20, 20)`) Comet
 - **Embedded Safety**:
   - Never use `mem::forget` on `esp-hal` peripheral or buffer types.
-  - Keep stack frames bounded; large buffers (like SPI encode buffers) must use `StaticCell` or static arrays.
+  - Keep stack frames bounded; large buffers must use `StaticCell` or static arrays.
 
 ---
 
@@ -154,9 +156,9 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
 - **Observer Contract**:
   - Hooks are **strictly read-only observers**. They must NEVER alter CLI arguments, return non-zero exit codes to the parent process, or disrupt agent execution.
 - **Standard Output (stdout) Rule**:
-  - **NEVER output any text to `stdout` in hooks**. Many CLIs (e.g. Claude Code, Codex) expect specific stdout formats or capture stdout for LLM context. Divert debug output to `/dev/null` or stderr.
+  - **NEVER output arbitrary text to `stdout` in hooks**. Many CLIs (e.g. Claude Code, Codex) capture stdout for LLM context or require specific JSON schemas.
 - **Non-blocking Execution**:
-  - Hook datagrams must be fire-and-forget over `/tmp/kitt-eye.sock`. If the daemon is not running, `nc -U` should fail silently within milliseconds without blocking the CLI.
+  - Hook datagrams must be fire-and-forget over `/tmp/kitt-eye.sock`. If the daemon is not running, `nc -U` should fail silently without blocking the CLI.
 - **Dependencies**:
   - Requires `jq` and `nc` with Unix Domain Socket support (`nc -U`).
 
