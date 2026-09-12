@@ -17,6 +17,9 @@ pub const FADE_FACTOR: u8 = 180;
 /// Default milliseconds between animation steps.
 pub const ANIM_SPEED_MS: u32 = 35;
 
+/// Tick for Fill Sweep / K.I.T.T. scanner (slower, more deliberate).
+pub const SWEEP_SPEED_MS: u32 = 80;
+
 /// Pattern identifiers (classic theme maps one state → one pattern).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PatternId {
@@ -67,6 +70,14 @@ impl LedEngine {
 
     pub const fn pattern(&self) -> PatternId {
         self.pattern
+    }
+
+    /// Frame delay for the active pattern (sweep motions use a slower tick).
+    pub const fn anim_delay_ms(&self) -> u32 {
+        match self.pattern {
+            PatternId::FillSweep | PatternId::KittScanner => SWEEP_SPEED_MS,
+            _ => ANIM_SPEED_MS,
+        }
     }
 
     /// Switch motion theme if changed.
@@ -335,6 +346,23 @@ mod tests {
         eng.set_theme(MotionTheme::Colorful);
         assert_eq!(eng.theme(), MotionTheme::Colorful);
         assert_eq!(eng.pattern(), PatternId::KittScanner);
+    }
+
+    #[test]
+    fn sweep_patterns_use_slower_delay() {
+        let mut eng = LedEngine::new(MotionTheme::Classic);
+        assert_eq!(eng.anim_delay_ms(), ANIM_SPEED_MS);
+
+        eng.set_state(AgentState::Generating);
+        assert_eq!(eng.pattern(), PatternId::FillSweep);
+        assert_eq!(eng.anim_delay_ms(), SWEEP_SPEED_MS);
+
+        eng.set_state(AgentState::ExecutingTool);
+        assert_eq!(eng.pattern(), PatternId::KittScanner);
+        assert_eq!(eng.anim_delay_ms(), SWEEP_SPEED_MS);
+
+        eng.set_state(AgentState::Idle);
+        assert_eq!(eng.anim_delay_ms(), ANIM_SPEED_MS);
     }
 
     #[test]

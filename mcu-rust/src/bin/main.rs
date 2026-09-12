@@ -155,7 +155,12 @@ async fn main(spawner: Spawner) -> ! {
         critical_section::with(|_| {
             let _ = strip.write(brightness(frame.into_iter(), BRIGHTNESS));
         });
-        Timer::after(Duration::from_millis(ANIM_SPEED_MS as u64)).await;
+        let delay_ms = if wifi_up {
+            engine.anim_delay_ms()
+        } else {
+            ANIM_SPEED_MS
+        };
+        Timer::after(Duration::from_millis(delay_ms as u64)).await;
     }
 }
 
