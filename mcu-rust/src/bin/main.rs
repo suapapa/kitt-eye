@@ -7,7 +7,7 @@
 )]
 #![deny(clippy::large_stack_frames)]
 
-use core::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 use embassy_executor::Spawner;
 use embassy_net::{dns::DnsQueryType, tcp::TcpSocket, DhcpConfig, Runner, Stack, StackResources};
@@ -55,6 +55,9 @@ const SPI_BUF_LEN: usize = LED_COUNT * 12 + 280;
 
 /// Shared agent state written by MQTT task, read by LED loop.
 static ACTIVE_STATE: AtomicU8 = AtomicU8::new(AgentState::Idle as u8);
+
+/// Set by the Wi-Fi connection task; LED shows rainbow until this is true.
+static WIFI_CONNECTED: AtomicBool = AtomicBool::new(false);
 
 macro_rules! mk_static {
     ($t:ty, $val:expr) => {{
@@ -130,10 +133,25 @@ async fn main(spawner: Spawner) -> ! {
     spawner.spawn(mqtt_task(stack).unwrap());
 
     // LED animation loop (blocking SPI inside critical section).
+    // Rainbow bounce until Wi-Fi associates; then agent-state patterns.
+    let mut wifi_was_up = false;
     loop {
-        let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
-        engine.set_state(state);
-        let frame = *engine.step();
+        let wifi_up = WIFI_CONNECTED.load(Ordering::Relaxed);
+        if wifi_up && !wifi_was_up {
+            let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
+            engine.sync_state(state);
+        } else if !wifi_up && wifi_was_up {
+            engine.begin_wifi_wait();
+        }
+        wifi_was_up = wifi_up;
+
+        let frame = if wifi_up {
+            let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
+            engine.set_state(state);
+            *engine.step()
+        } else {
+            *engine.step_wifi_wait()
+        };
         critical_section::with(|_| {
             let _ = strip.write(brightness(frame.into_iter(), BRIGHTNESS));
         });
@@ -263,11 +281,15 @@ async fn connection(mut controller: WifiController<'static>) {
     const TX_POWER: i8 = 34;
     loop {
         if controller.is_connected() {
+            WIFI_CONNECTED.store(true, Ordering::Relaxed);
             let _ = controller.wait_for_disconnect_async().await;
+            WIFI_CONNECTED.store(false, Ordering::Relaxed);
             println!("wifi disconnected");
             let _ = controller.set_power_saving(esp_radio::wifi::PowerSaveMode::None);
             Timer::after(Duration::from_secs(3)).await;
         }
+
+        WIFI_CONNECTED.store(false, Ordering::Relaxed);
 
         let station_config = WifiConfig::Station(
             StationConfig::default()
@@ -288,10 +310,12 @@ async fn connection(mut controller: WifiController<'static>) {
         println!("wifi connecting…");
         match controller.connect_async().await {
             Ok(_) => {
+                WIFI_CONNECTED.store(true, Ordering::Relaxed);
                 println!("wifi connected");
                 let _ = controller.set_power_saving(esp_radio::wifi::PowerSaveMode::None);
             }
             Err(e) => {
+                WIFI_CONNECTED.store(false, Ordering::Relaxed);
                 println!("wifi connect failed: {e:?}");
                 Timer::after(Duration::from_secs(5)).await;
             }

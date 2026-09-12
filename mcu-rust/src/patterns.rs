@@ -96,6 +96,24 @@ impl LedEngine {
         &self.pixels
     }
 
+    /// Boot / Wi-Fi wait: rainbow gradient slides back and forth along the strip.
+    pub fn step_wifi_wait(&mut self) -> &[RGB8; LED_COUNT] {
+        self.step_rainbow_bounce();
+        &self.pixels
+    }
+
+    /// Reset animation state before showing the Wi-Fi wait rainbow.
+    pub fn begin_wifi_wait(&mut self) {
+        self.reset_pattern();
+    }
+
+    /// Apply the current agent state and reset pattern (e.g. after Wi-Fi comes up).
+    pub fn sync_state(&mut self, state: AgentState) {
+        self.state = state;
+        self.pattern = self.theme.pattern_for(state);
+        self.reset_pattern();
+    }
+
     fn step_breathing(&mut self) {
         // Triangle wave 0..255..0
         let p = self.phase as u8;
@@ -214,6 +232,50 @@ impl LedEngine {
         self.pixels[prev] = scale_color(BASE_COLOR, 160);
         self.phase = self.phase.wrapping_add(1);
     }
+
+    fn step_rainbow_bounce(&mut self) {
+        // Spread hues across the strip; `phase` is the sliding offset (0..=255).
+        const HUE_SPACING: u8 = (256 / LED_COUNT) as u8;
+        for i in 0..LED_COUNT {
+            let hue = (self.phase as u8).wrapping_add(HUE_SPACING.wrapping_mul(i as u8));
+            self.pixels[i] = hsv_to_rgb(hue, 255, 255);
+        }
+
+        const STEP: i16 = 4;
+        let next = self.phase as i16 + i16::from(self.dir) * STEP;
+        if next >= 255 {
+            self.phase = 255;
+            self.dir = -1;
+        } else if next <= 0 {
+            self.phase = 0;
+            self.dir = 1;
+        } else {
+            self.phase = next as u16;
+        }
+    }
+}
+
+/// 8-bit HSV → RGB (full sat/value yields a classic rainbow wheel).
+fn hsv_to_rgb(h: u8, s: u8, v: u8) -> RGB8 {
+    if s == 0 {
+        return RGB8::new(v, v, v);
+    }
+    let region = h / 43;
+    let remainder = (h - region * 43) * 6;
+    let p = scale8(v, 255u8.saturating_sub(s));
+    let q = scale8(v, 255u8.saturating_sub(scale8(s, remainder)));
+    let t = scale8(
+        v,
+        255u8.saturating_sub(scale8(s, 255u8.saturating_sub(remainder))),
+    );
+    match region {
+        0 => RGB8::new(v, t, p),
+        1 => RGB8::new(q, v, p),
+        2 => RGB8::new(p, v, t),
+        3 => RGB8::new(p, q, v),
+        4 => RGB8::new(t, p, v),
+        _ => RGB8::new(v, p, q),
+    }
 }
 
 #[inline]
@@ -266,5 +328,21 @@ mod tests {
                 assert_eq!(frame.len(), LED_COUNT);
             }
         }
+    }
+
+    #[test]
+    fn wifi_wait_rainbow_bounces() {
+        let mut eng = LedEngine::new(MotionTheme::Classic);
+        let mut saw_nonzero = false;
+        for _ in 0..200 {
+            let frame = eng.step_wifi_wait();
+            assert_eq!(frame.len(), LED_COUNT);
+            if frame.iter().any(|c| c.r | c.g | c.b != 0) {
+                saw_nonzero = true;
+            }
+        }
+        assert!(saw_nonzero);
+        eng.sync_state(AgentState::Idle);
+        assert_eq!(eng.pattern(), PatternId::Breathing);
     }
 }
