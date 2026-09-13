@@ -170,6 +170,39 @@ make run-sub
 
 ---
 
+### 3a. Linux systemd 사용자 서비스(User Service)로 상시 실행
+
+터미널 창을 계속 띄워둘 필요 없이, `kitt-eye-pub`을 systemd 사용자 서비스로 등록하여 백그라운드에서 상시 실행할 수 있습니다:
+
+```bash
+# 1. 서비스 빌드, 설치 및 시작
+make install-service
+
+# 2. 서비스 상태 확인
+make status-service    # 또는: systemctl --user status kitt-eye-pub.service
+
+# 3. 실시간 로그 확인
+make logs-service      # 또는: journalctl --user -u kitt-eye-pub.service -f
+```
+
+- 실행 바이너리: `~/.local/bin/kitt-eye-pub`
+- 설정 파일: `~/.config/kitt-eye/config.yaml`
+- 환경변수 설정: `~/.config/kitt-eye/env` (예: `KITTEYE_MQTT_PASSWORD=...`)
+- 서비스 유닛: `~/.config/systemd/user/kitt-eye-pub.service`
+
+> [!TIP]
+> SSH 세션을 종료하거나 시스템 부팅 후 로그인하지 않아도 데몬이 계속 실행되도록 하려면 링거(linger)를 활성화하세요:
+> ```bash
+> loginctl enable-linger
+> ```
+
+서비스를 중지하고 삭제하려면:
+```bash
+make uninstall-service
+```
+
+---
+
 ### 3b. 하드웨어 및 상태 데모 (AI Agent 훅 연동 없이 테스트)
 
 실제 AI CLI 에이전트 작업을 기다리지 않고 ESP32 LED 바의 애니메이션이나 Home Assistant 연동을 즉시 시연/테스트할 수 있는 두 가지 데모 환경을 제공합니다:
@@ -317,7 +350,12 @@ kitt-eye>
 ```bash
 make help                       # 전체 타깃 도움말 출력
 make build-pub                  # Go Publisher 빌드 -> pub-go/bin/kitt-eye-pub
-make run-pub                    # Go Publisher 데몬 실행
+make run-pub                    # Go Publisher 데몬 로컬 실행
+make install-service            # Linux systemd 사용자 서비스 등록 및 시작
+make uninstall-service          # Linux systemd 사용자 서비스 중지 및 제거
+make status-service             # systemd 사용자 서비스 상태 확인
+make restart-service            # systemd 사용자 서비스 재시작
+make logs-service               # systemd 사용자 서비스 실시간 로그 확인
 make build-sub                  # MQTT 테스트 구독자 빌드 -> pub-go/bin/kitt-eye-sub
 make run-sub                    # MQTT 토픽 실시간 모니터링
 make build-mcu                  # ESP32-C3 & S2 펌웨어 일괄 빌드
@@ -325,8 +363,8 @@ make build-mcu-c3               # ESP32-C3 Rust 펌웨어 빌드
 make build-mcu-s2               # ESP32-S2 Rust 펌웨어 빌드
 make flash-mcu-c3               # ESP32-C3 펌웨어 플래시 및 시리얼 모니터링
 make flash-mcu-s2               # ESP32-S2 펌웨어 플래시 (--no-stub) 및 모니터링
-make install-hooks              # 4개 CLI 훅 일괄 설치
-make uninstall-hooks            # 4개 CLI 훅 일괄 제거
+make install-hooks              # 5개 CLI 훅 일괄 설치
+make uninstall-hooks            # 5개 CLI 훅 일괄 제거
 make test                       # 전체 테스트 (Go 단위 테스트 + C3/S2 Rust 체크)
 make clean                      # 빌드 산출물 정리
 ```

@@ -128,3 +128,48 @@ func TestEmptyAgentsMeansNoWhitelist(t *testing.T) {
 		t.Error("empty agents list must mean accept-all")
 	}
 }
+
+func TestDefaultPath(t *testing.T) {
+	// 1. KITTEYE_CONFIG env override
+	t.Run("env override", func(t *testing.T) {
+		t.Setenv("KITTEYE_CONFIG", "/custom/kitt-eye.yaml")
+		if got := DefaultPath(); got != "/custom/kitt-eye.yaml" {
+			t.Errorf("DefaultPath() = %q, want %q", got, "/custom/kitt-eye.yaml")
+		}
+	})
+
+	// 2. XDG_CONFIG_HOME resolution
+	t.Run("xdg config resolution", func(t *testing.T) {
+		t.Setenv("KITTEYE_CONFIG", "")
+		tmp := t.TempDir()
+		xdgDir := filepath.Join(tmp, "xdg")
+		cfgDir := filepath.Join(xdgDir, "kitt-eye")
+		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		cfgPath := filepath.Join(cfgDir, "config.yaml")
+		if err := os.WriteFile(cfgPath, []byte("mqtt:\n  broker: ha.local\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		// Ensure we are in an empty directory without ./config.yaml
+		workDir := filepath.Join(tmp, "work")
+		if err := os.MkdirAll(workDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		origWd, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Chdir(origWd) }()
+		if err := os.Chdir(workDir); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Setenv("XDG_CONFIG_HOME", xdgDir)
+		if got := DefaultPath(); got != cfgPath {
+			t.Errorf("DefaultPath() = %q, want %q", got, cfgPath)
+		}
+	})
+}
+

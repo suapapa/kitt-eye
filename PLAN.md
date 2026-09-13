@@ -2,7 +2,7 @@
 
 ## 1. 프로젝트 개요
 
-`kitt-eye`는 다양한 AI 에이전트 CLI(`claude`, `codex`, `cursor-cli`, `antigravity-cli`)의 라이프사이클 훅(Hook)을 감지하여 에이전트의 현재 동작 상태(Thinking, Tool Execution, Waiting Input 등)를 수집하고, Go 언어로 작성된 Publisher를 통해 MQTT 브로커(Home Assistant Mosquitto)로 발행한 뒤, ESP32-C3 기반 MCU(Rust 작성)에서 구독하여 WS2812B LED(K.I.T.T. 스캐너 효과)로 시각화하는 홈랩 모니터링 시스템입니다.
+`kitt-eye`는 다양한 AI 에이전트 CLI(`claude`, `codex`, `cursor-cli`, `antigravity-cli`, `hermes`)의 라이프사이클 훅(Hook)을 감지하여 에이전트의 현재 동작 상태(Thinking, Tool Execution, Waiting Input 등)를 수집하고, Go 언어로 작성된 Publisher를 통해 MQTT 브로커(Home Assistant Mosquitto)로 발행한 뒤, ESP32-C3 기반 MCU(Rust 작성)에서 구독하여 WS2812B LED(K.I.T.T. 스캐너 효과)로 시각화하는 홈랩 모니터링 시스템입니다.
 
 ---
 
@@ -13,7 +13,8 @@
  ├── claude          (공식 Hooks: ~/.claude/settings.json)
  ├── codex           (공식 Hooks: ~/.codex/hooks.json + /hooks trust)
  ├── cursor-cli      (공식 Hooks: ~/.cursor/hooks.json)
- └── antigravity-cli (공식 Hooks: ~/.gemini/config/hooks.json named bundle)
+ ├── antigravity-cli (공식 Hooks: ~/.gemini/config/hooks.json named bundle)
+ └── hermes          (공식 Shell Hooks: ~/.hermes/config.yaml)
          │
          │  Unix Domain Socket (/tmp/kitt-eye.sock)
          │  JSON 단일 데이터그램, fire-and-forget, stdout 무출력
@@ -48,11 +49,12 @@ kitt-eye/
 ├── hooks/                   # 각 CLI별 훅 스크립트 및 래퍼
 │   ├── common/
 │   │   ├── send_event.sh    # Go 데몬에 상태를 전송하는 공통 UDS 전송 유틸리티
-│   │   └── merge_hooks.sh   # CLI 설정 JSON 멱등 병합/제거 유틸리티
+│   │   └── merge_hooks.sh   # CLI 설정 JSON/YAML 멱등 병합/제거 유틸리티
 │   ├── claude/              # Claude Code 훅 (hook.sh, settings.snippet.json)
 │   ├── codex/               # Codex CLI 훅 (hook.sh, hooks.snippet.json)
 │   ├── cursor-cli/          # Cursor CLI 훅 (hook.sh, hooks.snippet.json)
-│   └── antigravity-cli/     # Antigravity CLI 훅 (hook.sh, hooks.snippet.json)
+│   ├── antigravity-cli/     # Antigravity CLI 훅 (hook.sh, hooks.snippet.json)
+│   └── hermes/              # Hermes Agent 훅 (hook.sh, hooks.snippet.yaml, allowlist.snippet.json)
 ├── pub-go/                  # Go Publisher 데몬 (module: github.com/suapapa/kitt-eye/pub)
 │   ├── cmd/kitteye/         # 진입점 (main.go)
 │   ├── cmd/kitteye_sub_example/ # MQTT 구독 테스트 유틸리티
@@ -276,6 +278,34 @@ Cursor CLI(`cursor-agent`)는 Cursor IDE와 훅 설정을 공유합니다(`~/.cu
 #### 4.7.3. 훅 스크립트 계약 (`hooks/cursor-cli/hook.sh`)
 - 항상 exit 0 유지 (비0 코드는 경고/차단 유발).
 - stdout은 무출력 또는 `{}`.
+
+---
+
+### 4.8. Hermes Agent (`hermes`) 훅 연동
+
+Hermes Agent(Nous Research)는 `~/.hermes/config.yaml`에 정의하는 **Shell Hooks** 시스템을 지원합니다. 이벤트 발생 시 스크립트를 서브프로세스로 실행하며 `stdin`으로 JSON 페이로드를 전달합니다.
+
+#### 4.8.1. 설정 위치 & 사전 승인 (Allowlist)
+- 기본 설정 위치: `~/.hermes/config.yaml`
+- 사전 승인 파일: `~/.hermes/shell-hooks-allowlist.json`
+- `merge_hooks.sh`가 `config.yaml`의 `hooks:` 블록과 `shell-hooks-allowlist.json`의 `approvals`를 동시에 멱등 병합하여, 첫 실행 시 TTY 승인 프롬프트 없이 즉시 동작합니다.
+
+#### 4.8.2. 훅 이벤트 → kitt-eye 상태 매핑
+| Hermes 이벤트 | kitt-eye 상태 | detail 내용 |
+|---|---|---|
+| `on_session_start` / `on_session_reset` | `idle` | 세션 시작/리셋 |
+| `pre_llm_call` | `thinking` | `extra.user_message` 요약 |
+| `on_stream_start` / `on_stream_delta` | `generating` | 생성 중 |
+| `pre_tool_call` | `executing_tool` | `tool_name` + args 요약 |
+| `post_tool_call` | `thinking` | 도구 실행 완료 후 대기 |
+| `pre_approval_request` | `waiting_input` | 승인 요청 커맨드/설명 |
+| `api_request_error` | `error` | API 오류 메시지 |
+| `subagent_start` / `subagent_stop` | `executing_tool` / `thinking` | 서브에이전트 역할 |
+| `on_session_end` / `on_session_finalize` | `done` | 세션 완료 |
+
+#### 4.8.3. 훅 스크립트 계약 (`hooks/hermes/hook.sh`)
+- 항상 exit 0 유지 (종료 코드 2는 도구 차단으로 해석됨).
+- stdout은 무출력 (빈 문자열) 유지.
 
 ---
 

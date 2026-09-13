@@ -1,0 +1,14 @@
+[Unit]
+Description=kitt-eye Publisher Daemon
+Documentation=https://github.com/suapapa/kitt-eye
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/kitt-eye-pub --config %h/.config/kitt-eye/config.yaml
+Restart=on-failure
+RestartSec=5s
+EnvironmentFile=-%h/.config/kitt-eye/env
+
+[Install]
+WantedBy=default.target

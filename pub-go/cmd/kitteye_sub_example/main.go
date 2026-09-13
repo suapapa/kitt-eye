@@ -30,7 +30,7 @@ func main() {
 }
 
 func run() error {
-	configPath := flag.String("config", defaultConfigPath(), "path to config YAML")
+	configPath := flag.String("config", config.DefaultPath(), "path to config YAML")
 	topic := flag.String("topic", "", "subscribe filter (default <mqtt.topic_prefix>/#)")
 	flag.Parse()
 
@@ -146,11 +146,4 @@ func onMessage(_ paho.Client, msg paho.Message) {
 		retain,
 		string(msg.Payload()),
 	)
-}
-
-func defaultConfigPath() string {
-	if v := os.Getenv("KITTEYE_CONFIG"); v != "" {
-		return v
-	}
-	return "config.yaml"
 }

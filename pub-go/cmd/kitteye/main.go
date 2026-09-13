@@ -31,7 +31,7 @@ func main() {
 }
 
 func run() error {
-	configPath := flag.String("config", defaultConfigPath(), "path to config YAML")
+	configPath := flag.String("config", config.DefaultPath(), "path to config YAML")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
@@ -192,12 +192,4 @@ func brokerLabel(cfg *config.Config) string {
 		return "dry-run(stdout)"
 	}
 	return net.JoinHostPort(cfg.MQTT.Broker, strconv.Itoa(cfg.MQTT.Port))
-}
-
-// defaultConfigPath resolves the config file: $KITTEYE_CONFIG, else ./config.yaml.
-func defaultConfigPath() string {
-	if v := os.Getenv("KITTEYE_CONFIG"); v != "" {
-		return v
-	}
-	return "config.yaml"
 }

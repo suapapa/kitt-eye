@@ -58,6 +58,32 @@ type Agent struct {
 	MaxSessions int    `yaml:"max_sessions"`
 }
 
+// DefaultPath resolves the default path to the config file:
+// 1. $KITTEYE_CONFIG if set and non-empty
+// 2. ./config.yaml (if present in current directory)
+// 3. $XDG_CONFIG_HOME/kitt-eye/config.yaml or ~/.config/kitt-eye/config.yaml (if present)
+// 4. fallback to "config.yaml"
+func DefaultPath() string {
+	if v := os.Getenv("KITTEYE_CONFIG"); v != "" {
+		return v
+	}
+	if _, err := os.Stat("config.yaml"); err == nil {
+		return "config.yaml"
+	}
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		p := filepath.Join(xdg, "kitt-eye", "config.yaml")
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	} else if home, err := os.UserHomeDir(); err == nil {
+		p := filepath.Join(home, ".config", "kitt-eye", "config.yaml")
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return "config.yaml"
+}
+
 // Load reads, decodes (strict), defaults and validates a config file.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)

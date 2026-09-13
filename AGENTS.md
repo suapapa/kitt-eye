@@ -6,10 +6,10 @@ Welcome to `kitt-eye`. This document provides essential architectural context, c
 
 ## 1. Project Overview
 
-`kitt-eye` is a homelab monitoring system that captures lifecycle events from AI coding CLI agents (`claude`, `codex`, `cursor-cli`, `antigravity-cli`), aggregates their states via a Go daemon over Unix Domain Socket IPC, publishes the active state to an MQTT broker (Home Assistant Mosquitto), and visualizes the state on an ESP32-C3 or ESP32-S2 WS2812B NeoPixel LED bar (K.I.T.T. scanner from Knight Rider).
+`kitt-eye` is a homelab monitoring system that captures lifecycle events from AI coding CLI agents (`claude`, `codex`, `cursor-cli`, `antigravity-cli`, `hermes`), aggregates their states via a Go daemon over Unix Domain Socket IPC, publishes the active state to an MQTT broker (Home Assistant Mosquitto), and visualizes the state on an ESP32-C3 or ESP32-S2 WS2812B NeoPixel LED bar (K.I.T.T. scanner from Knight Rider).
 
 ```text
-[ AI CLI Tools (claude / codex / cursor / agy) ]
+[ AI CLI Tools (claude / codex / cursor / agy / hermes) ]
         │  Lifecycle hooks (JSON over Unix Domain Socket /tmp/kitt-eye.sock)
         ▼
 [ Go Publisher Daemon (`pub-go`) ]
@@ -42,11 +42,12 @@ kitt-eye/
 ├── hooks/                   # Lifecycle hooks for AI CLI tools
 │   ├── common/
 │   │   ├── send_event.sh    # UDS sender (uses nc -U, encodes JSON via jq)
-│   │   └── merge_hooks.sh   # Idempotent snippet injector for CLI config JSONs
+│   │   └── merge_hooks.sh   # Idempotent snippet injector for CLI config JSONs/YAMLs
 │   ├── claude/              # Claude Code (~/.claude/settings.json)
 │   ├── codex/               # Codex CLI (~/.codex/hooks.json)
 │   ├── cursor-cli/          # Cursor CLI (~/.cursor/hooks.json)
-│   └── antigravity-cli/     # Antigravity (~/.gemini/config/hooks.json)
+│   ├── antigravity-cli/     # Antigravity (~/.gemini/config/hooks.json)
+│   └── hermes/              # Hermes Agent (~/.hermes/config.yaml)
 ├── pub-go/                  # Go Publisher Daemon (module: github.com/suapapa/kitt-eye/pub)
 │   ├── cmd/kitteye/         # Daemon entry point
 │   ├── cmd/kitteye_mock/    # Mock state generator for hardware demos
@@ -106,10 +107,17 @@ make test               # Runs:
                         # 4. cd mcu-rust-esp32s2 && cargo check --release
 
 # Local testing without MQTT broker (Dry-run mode)
-make run-pub            # Runs publisher using config.yaml (stdout JSON sink if broker is "")
+make run-pub            # Runs publisher locally using config.yaml (stdout JSON sink if broker is "")
 # In another terminal:
 ./hooks/common/send_event.sh claude executing_tool "Running tests"
 ./hooks/common/send_event.sh claude done "All tests passed"
+
+# Linux systemd user service management
+make install-service    # Install, enable, and start Go publisher as systemd user service
+make uninstall-service  # Stop, disable, and remove Go publisher systemd user service
+make status-service     # Check systemd user service status
+make logs-service       # Follow systemd user service logs (journalctl -f)
+make restart-service    # Restart systemd user service
 
 # Mock state demo (simulates states without AI CLI agents or hooks)
 make demo-mqtt          # Run automated MQTT state cycling demo using config.yaml
@@ -122,7 +130,7 @@ make demo-serial        # Run USB serial port direct hardware demo
 ./scripts/demo-serial/demo.sh -m console     # Direct interactive MCU CLI shell
 
 # CLI Hooks management (requires jq and nc)
-make install-hooks      # Idempotently inject hooks for all 4 supported CLIs
+make install-hooks      # Idempotently inject hooks for all 5 supported CLIs
 make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other user hooks
 ```
 
@@ -236,7 +244,7 @@ Default topic prefix is `kitt-eye` (all published with QoS 1 and Retain flag):
 | Topic | Payload | Description |
 |---|---|---|
 | `{prefix}/active_state` | Plain text (`idle`, `thinking`, `generating`, `executing_tool`, `waiting_input`, `done`, `error`) | **Subscribed by MCU** |
-| `{prefix}/active_agent` | Plain text (`claude`, `codex`, `cursor-cli`, `antigravity-cli`) | Name of current active agent |
+| `{prefix}/active_agent` | Plain text (`claude`, `codex`, `cursor-cli`, `antigravity-cli`, `hermes`) | Name of current active agent |
 | `{prefix}/agents/{agent}/state` | Plain text | Representative state for specific agent |
 | `{prefix}/agents/{agent}/sessions` | JSON (`AgentSnapshot`) | Active sessions array with detail & timestamps |
 | `{prefix}/system/status` | Plain text (`online` / `offline`) | Daemon availability & LWT message |

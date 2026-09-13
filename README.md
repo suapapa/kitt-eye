@@ -166,6 +166,39 @@ make run-sub
 
 ---
 
+### 3a. Run as a Linux systemd User Service (Background Daemon)
+
+Instead of keeping a terminal window open with `make run-pub`, you can install `kitt-eye-pub` as a systemd user service:
+
+```bash
+# 1. Build, install, and start the user service
+make install-service
+
+# 2. Check service status
+make status-service    # or: systemctl --user status kitt-eye-pub.service
+
+# 3. View live logs
+make logs-service      # or: journalctl --user -u kitt-eye-pub.service -f
+```
+
+- Service binary: `~/.local/bin/kitt-eye-pub`
+- Configuration file: `~/.config/kitt-eye/config.yaml`
+- Environment overrides: `~/.config/kitt-eye/env` (e.g. `KITTEYE_MQTT_PASSWORD=...`)
+- Unit file: `~/.config/systemd/user/kitt-eye-pub.service`
+
+> [!TIP]
+> To keep the publisher running even after logging out of SSH or on system boot without interactive login:
+> ```bash
+> loginctl enable-linger
+> ```
+
+To stop and remove the service:
+```bash
+make uninstall-service
+```
+
+---
+
 ### 3b. Hardware & State Demo (Without AI Agent Hooks)
 
 Want to test your ESP32 LED bar animations without waiting for real AI coding agents? We provide both MQTT and direct USB Serial demos:
@@ -313,7 +346,12 @@ All state topics are published with **QoS 1 and Retain flag** so late-joining de
 ```bash
 make help                       # Display all available targets
 make build-pub                  # Compile Go publisher -> pub-go/bin/kitt-eye-pub
-make run-pub                    # Run Go publisher daemon with config.yaml
+make run-pub                    # Run Go publisher daemon locally with config.yaml
+make install-service            # Install & start Go publisher as Linux systemd user service
+make uninstall-service          # Stop & remove Go publisher systemd user service
+make status-service             # Check systemd user service status
+make restart-service            # Restart systemd user service
+make logs-service               # Follow systemd user service logs
 make build-sub                  # Compile MQTT subscriber example -> pub-go/bin/kitt-eye-sub
 make run-sub                    # Run subscriber example against config.yaml broker
 make build-mcu                  # Build both ESP32-C3 and ESP32-S2 firmwares
@@ -321,7 +359,7 @@ make build-mcu-c3               # Build ESP32-C3 Rust firmware
 make build-mcu-s2               # Build ESP32-S2 Rust firmware
 make flash-mcu-c3               # Flash ESP32-C3 firmware and monitor logs
 make flash-mcu-s2               # Flash ESP32-S2 firmware (--no-stub) and monitor logs
-make install-hooks              # Install hooks for all 4 AI CLIs
+make install-hooks              # Install hooks for all 5 AI CLIs
 make uninstall-hooks            # Uninstall hooks and clean up binaries
 make test                       # Run full test suite (Go unit tests + both Rust checks)
 make clean                      # Clean build artifacts

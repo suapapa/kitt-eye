@@ -1,14 +1,27 @@
 .PHONY: help build-pub run-pub build-sub run-sub build-mock run-mock demo demo-mqtt demo-serial \
+	install-service install-user-service uninstall-service status-service restart-service logs-service log-service \
 	build-mcu build-mcu-c3 build-mcu-s2 \
 	flash-mcu flash-mcu-c3 flash-mcu-s2 \
 	install-hooks uninstall-hooks \
 	install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli install-hooks-hermes \
 	test clean
 
+PREFIX ?= $(HOME)/.local
+BINDIR ?= $(PREFIX)/bin
+XDG_CONFIG_HOME ?= $(HOME)/.config
+CONFIG_DIR ?= $(XDG_CONFIG_HOME)/kitt-eye
+SYSTEMD_USER_DIR ?= $(XDG_CONFIG_HOME)/systemd/user
+SERVICE_NAME := kitt-eye-pub.service
+
 HELP_MSG = "Usage: make [target]\n\n\
 Targets:\n\
   build-pub                 Build Go publisher daemon\n\
   run-pub                   Run Go publisher daemon locally\n\
+  install-service           Install & start Go publisher as Linux systemd user service\n\
+  uninstall-service         Stop & remove Go publisher systemd user service\n\
+  status-service            Check systemd user service status\n\
+  restart-service           Restart systemd user service\n\
+  logs-service              Follow systemd user service logs\n\
   build-sub                 Build Go MQTT subscriber example (cmd/kitteye_sub_example)\n\
   run-sub                   Run MQTT subscriber example (shares config.yaml)\n\
   build-mock                Build Go mock state generator (cmd/kitteye_mock)\n\
@@ -44,6 +57,86 @@ build-pub:
 run-pub: build-pub
 	@echo "==> Starting Go publisher daemon..."
 	./pub-go/bin/kitt-eye-pub --config config.yaml
+
+install-service: build-pub
+	@if [ "$$(uname -s)" != "Linux" ]; then \
+		echo "Warning: System is $$(uname -s). systemd user service is intended for Linux systems." >&2; \
+	fi
+	@command -v systemctl >/dev/null 2>&1 || { \
+		echo "Error: systemctl not found. This target requires Linux systemd." >&2; exit 1; \
+	}
+	@echo "==> Installing kitt-eye-pub binary to $(BINDIR)..."
+	@mkdir -p "$(BINDIR)"
+	@rm -f "$(BINDIR)/kitt-eye-pub"
+	@cp -f pub-go/bin/kitt-eye-pub "$(BINDIR)/kitt-eye-pub"
+	@chmod 0755 "$(BINDIR)/kitt-eye-pub"
+	@echo "==> Setting up configuration in $(CONFIG_DIR)..."
+	@mkdir -p "$(CONFIG_DIR)"
+	@if [ ! -f "$(CONFIG_DIR)/config.yaml" ]; then \
+		if [ -f config.yaml ]; then \
+			echo "    Copied config.yaml -> $(CONFIG_DIR)/config.yaml"; \
+			cp config.yaml "$(CONFIG_DIR)/config.yaml"; \
+		else \
+			echo "    Copied config.example.yaml -> $(CONFIG_DIR)/config.yaml"; \
+			cp config.example.yaml "$(CONFIG_DIR)/config.yaml"; \
+		fi; \
+		chmod 0600 "$(CONFIG_DIR)/config.yaml"; \
+	else \
+		echo "    Preserved existing $(CONFIG_DIR)/config.yaml"; \
+	fi
+	@if [ ! -f "$(CONFIG_DIR)/env" ]; then \
+		echo "# kitt-eye service environment variables" > "$(CONFIG_DIR)/env"; \
+		echo "# KITTEYE_MQTT_PASSWORD=your_secret_password" >> "$(CONFIG_DIR)/env"; \
+		echo "# KITTEYE_MQTT_BROKER=homeassistant.local" >> "$(CONFIG_DIR)/env"; \
+		chmod 0600 "$(CONFIG_DIR)/env"; \
+		echo "    Created template $(CONFIG_DIR)/env"; \
+	fi
+	@echo "==> Installing systemd user unit to $(SYSTEMD_USER_DIR)..."
+	@mkdir -p "$(SYSTEMD_USER_DIR)"
+	@sed -e 's|%h/.local/bin/kitt-eye-pub|$(subst $(HOME),%h,$(BINDIR))/kitt-eye-pub|g' \
+	     -e 's|%h/.config/kitt-eye|$(subst $(HOME),%h,$(CONFIG_DIR))|g' \
+	     systemd/$(SERVICE_NAME) > "$(SYSTEMD_USER_DIR)/$(SERVICE_NAME)"
+	@echo "==> Reloading systemd daemon..."
+	@systemctl --user daemon-reload
+	@echo "==> Enabling and starting $(SERVICE_NAME)..."
+	@systemctl --user enable $(SERVICE_NAME)
+	@systemctl --user restart $(SERVICE_NAME)
+	@echo ""
+	@echo "kitt-eye publisher user service successfully installed and started!"
+	@echo "  Status : make status-service   (or systemctl --user status $(SERVICE_NAME))"
+	@echo "  Logs   : make logs-service     (or journalctl --user -u $(SERVICE_NAME) -f)"
+	@echo "  Config : $(CONFIG_DIR)/config.yaml"
+	@echo "  Env    : $(CONFIG_DIR)/env"
+	@echo ""
+	@echo "Tip: To keep user services running after logout / on boot without interactive login:"
+	@echo "     loginctl enable-linger"
+
+install-user-service: install-service
+
+uninstall-service:
+	@command -v systemctl >/dev/null 2>&1 || { \
+		echo "Error: systemctl not found. This target requires Linux systemd." >&2; exit 1; \
+	}
+	@echo "==> Stopping and disabling $(SERVICE_NAME)..."
+	@systemctl --user disable --now $(SERVICE_NAME) 2>/dev/null || true
+	@echo "==> Removing systemd unit..."
+	@rm -f "$(SYSTEMD_USER_DIR)/$(SERVICE_NAME)"
+	@systemctl --user daemon-reload
+	@echo "==> Removing binary $(BINDIR)/kitt-eye-pub..."
+	@rm -f "$(BINDIR)/kitt-eye-pub"
+	@echo "==> Service uninstalled."
+	@echo "Note: Configuration at $(CONFIG_DIR) was preserved."
+
+status-service:
+	@systemctl --user status $(SERVICE_NAME)
+
+restart-service:
+	@systemctl --user restart $(SERVICE_NAME)
+
+logs-service:
+	@journalctl --user -u $(SERVICE_NAME) -f
+
+log-service: logs-service
 
 build-sub:
 	@echo "==> Building Go MQTT subscriber example..."
