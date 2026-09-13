@@ -128,17 +128,29 @@ macro_rules! mk_static {
     }};
 }
 
+enum CliOutput {
+    Static(&'static str),
+    Buffer(String<512>),
+}
+
+impl CliOutput {
+    fn as_str(&self) -> &str {
+        match self {
+            CliOutput::Static(s) => s,
+            CliOutput::Buffer(b) => b.as_str(),
+        }
+    }
+}
+
 #[allow(clippy::large_stack_frames)]
-async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
+async fn process_cli_command(line: &str) -> (CliOutput, bool) {
     use core::fmt::Write;
-    use kitt_eye_common::cli::{parse_line, write_help, CliCommand};
+    use kitt_eye_common::cli::{parse_line, CliCommand, HELP_TEXT};
 
     match parse_line(line) {
-        Ok(CliCommand::Help) => {
-            write_help(out);
-            false
-        }
+        Ok(CliCommand::Help) => (CliOutput::Static(HELP_TEXT), false),
         Ok(CliCommand::Status) => {
+            let mut out = String::<512>::new();
             let wifi_up = WIFI_CONNECTED.load(Ordering::Relaxed);
             let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
             let override_active = MANUAL_OVERRIDE.load(Ordering::Relaxed);
@@ -153,9 +165,10 @@ async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
                 if override_active { "MANUAL" } else { "AUTO(MQTT)" },
                 theme,
             );
-            false
+            (CliOutput::Buffer(out), false)
         }
         Ok(CliCommand::GetState) => {
+            let mut out = String::<512>::new();
             let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
             let override_active = MANUAL_OVERRIDE.load(Ordering::Relaxed);
             let _ = write!(
@@ -164,9 +177,10 @@ async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
                 state.as_str(),
                 if override_active { "MANUAL" } else { "AUTO(MQTT)" }
             );
-            false
+            (CliOutput::Buffer(out), false)
         }
         Ok(CliCommand::SetState(new_state)) => {
+            let mut out = String::<512>::new();
             MANUAL_OVERRIDE.store(true, Ordering::Relaxed);
             ACTIVE_STATE.store(new_state as u8, Ordering::Relaxed);
             let _ = write!(
@@ -174,21 +188,24 @@ async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
                 "OK: state set to '{}' (manual override ON)\r\n",
                 new_state.as_str()
             );
-            false
+            (CliOutput::Buffer(out), false)
         }
         Ok(CliCommand::StateAuto) => {
             MANUAL_OVERRIDE.store(false, Ordering::Relaxed);
-            let _ = out.push_str("OK: manual override OFF (listening to MQTT)\r\n");
-            false
+            (
+                CliOutput::Static("OK: manual override OFF (listening to MQTT)\r\n"),
+                false,
+            )
         }
         Ok(CliCommand::SetTheme(theme)) => {
+            let mut out = String::<512>::new();
             let val = if theme == MotionTheme::Colorful { 1 } else { 0 };
             ACTIVE_THEME.store(val, Ordering::Relaxed);
             update_runtime_config(|c| {
                 c.motion_theme = theme;
             });
             let _ = write!(out, "OK: theme switched to '{}'\r\n", theme.as_str());
-            false
+            (CliOutput::Buffer(out), false)
         }
         Ok(CliCommand::SetWifi { ssid, pass }) => {
             update_runtime_config(|c| {
@@ -197,8 +214,10 @@ async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
                 c.pass.clear();
                 let _ = c.pass.push_str(pass);
             });
-            let _ = out.push_str("OK: Wi-Fi credentials updated. Type 'save' then 'reboot'.\r\n");
-            false
+            (
+                CliOutput::Static("OK: Wi-Fi credentials updated. Type 'save' then 'reboot'.\r\n"),
+                false,
+            )
         }
         Ok(CliCommand::SetMqttBroker(b)) => {
             update_runtime_config(|c| {
@@ -216,28 +235,39 @@ async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
                     let _ = c.mqtt_pass.push_str(p);
                 }
             });
-            let _ = out.push_str("OK: MQTT broker updated. Type 'save' then 'reboot'.\r\n");
-            false
+            (
+                CliOutput::Static("OK: MQTT broker updated. Type 'save' then 'reboot'.\r\n"),
+                false,
+            )
         }
         Ok(CliCommand::SetMqttTopic(prefix)) => {
             update_runtime_config(|c| {
                 c.mqtt_topic_prefix.clear();
                 let _ = c.mqtt_topic_prefix.push_str(prefix);
             });
-            let _ = out.push_str("OK: MQTT topic updated. Type 'save' then 'reboot'.\r\n");
-            false
+            (
+                CliOutput::Static("OK: MQTT topic updated. Type 'save' then 'reboot'.\r\n"),
+                false,
+            )
         }
         Ok(CliCommand::SetMqttClientId(client_id)) => {
             update_runtime_config(|c| {
                 c.mqtt_client_id.clear();
                 let _ = c.mqtt_client_id.push_str(client_id);
             });
-            let _ = out.push_str("OK: MQTT client ID updated. Type 'save' then 'reboot'.\r\n");
-            false
+            (
+                CliOutput::Static("OK: MQTT client ID updated. Type 'save' then 'reboot'.\r\n"),
+                false,
+            )
         }
         Ok(CliCommand::GetConfig) => {
+            let mut out = String::<512>::new();
             let cfg = get_runtime_config();
-            let theme_str = if ACTIVE_THEME.load(Ordering::Relaxed) == 1 { "colorful" } else { "classic" };
+            let theme_str = if ACTIVE_THEME.load(Ordering::Relaxed) == 1 {
+                "colorful"
+            } else {
+                "classic"
+            };
             let _ = write!(
                 out,
                 "CONFIG:\r\n  SSID: {}\r\n  PASS: {}\r\n  Broker: {}:{}\r\n  User: {}\r\n  Topic: {}\r\n  Client ID: {}\r\n  Theme: {}\r\n",
@@ -250,49 +280,52 @@ async fn process_cli_command(line: &str, out: &mut String<512>) -> bool {
                 cfg.mqtt_client_id.as_str(),
                 theme_str,
             );
-            false
+            (CliOutput::Buffer(out), false)
         }
         Ok(CliCommand::Save) => {
             let cfg = get_runtime_config();
             match save_config_to_flash(&cfg) {
-                Ok(()) => {
-                    let _ = out.push_str("OK: configuration saved to flash. Type 'reboot' to apply.\r\n");
-                }
+                Ok(()) => (
+                    CliOutput::Static("OK: configuration saved to flash. Type 'reboot' to apply.\r\n"),
+                    false,
+                ),
                 Err(err) => {
+                    let mut out = String::<512>::new();
                     let _ = write!(out, "ERR: {}\r\n", err);
+                    (CliOutput::Buffer(out), false)
                 }
             }
-            false
         }
-        Ok(CliCommand::Load) => {
-            match load_config_from_flash() {
-                Some(loaded) => {
-                    let theme_val = if loaded.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
-                    ACTIVE_THEME.store(theme_val, Ordering::Relaxed);
-                    set_runtime_config(loaded);
-                    let _ = out.push_str("OK: configuration loaded from flash.\r\n");
-                }
-                None => {
-                    let _ = out.push_str("ERR: no valid configuration in flash\r\n");
-                }
+        Ok(CliCommand::Load) => match load_config_from_flash() {
+            Some(loaded) => {
+                let theme_val = if loaded.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
+                ACTIVE_THEME.store(theme_val, Ordering::Relaxed);
+                set_runtime_config(loaded);
+                (
+                    CliOutput::Static("OK: configuration loaded from flash.\r\n"),
+                    false,
+                )
             }
-            false
-        }
+            None => (
+                CliOutput::Static("ERR: no valid configuration in flash\r\n"),
+                false,
+            ),
+        },
         Ok(CliCommand::ResetConfig) => {
             let def = RuntimeConfig::from_env_defaults();
             let theme_val = if def.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
             ACTIVE_THEME.store(theme_val, Ordering::Relaxed);
             set_runtime_config(def);
-            let _ = out.push_str("OK: configuration reset to defaults. Type 'save' to persist.\r\n");
-            false
+            (
+                CliOutput::Static("OK: configuration reset to defaults. Type 'save' to persist.\r\n"),
+                false,
+            )
         }
-        Ok(CliCommand::Reboot) => {
-            let _ = out.push_str("Rebooting MCU...\r\n");
-            true
-        }
+        Ok(CliCommand::Reboot) => (CliOutput::Static("Rebooting MCU...\r\n"), true),
         Err(err) => {
+            let mut out = String::<512>::new();
             let _ = write!(out, "ERR: {}\r\n", err);
-            false
+            (CliOutput::Buffer(out), false)
         }
     }
 }
@@ -325,6 +358,7 @@ async fn usb_cli_s2_task(
 
         let mut line_buf: String<128> = String::new();
         let mut rx_buf = [0u8; 64];
+        let mut last_was_cr = false;
 
         loop {
             let n = match class.read_packet(&mut rx_buf).await {
@@ -334,6 +368,7 @@ async fn usb_cli_s2_task(
 
             for &b in &rx_buf[..n] {
                 if b == 0x08 || b == 0x7f {
+                    last_was_cr = false;
                     if !line_buf.is_empty() {
                         let _ = line_buf.pop();
                         let _ = class.write_packet(b"\x08 \x08").await;
@@ -341,14 +376,17 @@ async fn usb_cli_s2_task(
                     continue;
                 }
 
-                let _ = class.write_packet(&[b]).await;
-
                 if b == b'\r' || b == b'\n' {
+                    if b == b'\n' && last_was_cr {
+                        last_was_cr = false;
+                        continue;
+                    }
+                    last_was_cr = b == b'\r';
+
                     let _ = class.write_packet(b"\r\n").await;
                     let trimmed = line_buf.trim();
                     if !trimmed.is_empty() {
-                        let mut response: String<512> = String::new();
-                        let reboot = process_cli_command(trimmed, &mut response).await;
+                        let (response, reboot) = process_cli_command(trimmed).await;
                         send_s2(&mut class, response.as_str()).await;
                         if reboot {
                             Timer::after(Duration::from_millis(200)).await;
@@ -357,8 +395,12 @@ async fn usb_cli_s2_task(
                     }
                     line_buf.clear();
                     send_s2(&mut class, "kitt-eye> ").await;
-                } else if line_buf.len() < 120 {
-                    let _ = line_buf.push(b as char);
+                } else {
+                    last_was_cr = false;
+                    let _ = class.write_packet(&[b]).await;
+                    if line_buf.len() < 120 {
+                        let _ = line_buf.push(b as char);
+                    }
                 }
             }
         }
@@ -396,6 +438,7 @@ async fn usb_cli_c3_task(
 
     let mut line_buf: String<128> = String::new();
     let mut rx_buf = [0u8; 64];
+    let mut last_was_cr = false;
 
     loop {
         let n = match usb_serial.read(&mut rx_buf).await {
@@ -408,6 +451,7 @@ async fn usb_cli_c3_task(
 
         for &b in &rx_buf[..n] {
             if b == 0x08 || b == 0x7f {
+                last_was_cr = false;
                 if !line_buf.is_empty() {
                     let _ = line_buf.pop();
                     let _ = usb_serial.write_all(b"\x08 \x08").await;
@@ -415,14 +459,17 @@ async fn usb_cli_c3_task(
                 continue;
             }
 
-            let _ = usb_serial.write_all(&[b]).await;
-
             if b == b'\r' || b == b'\n' {
+                if b == b'\n' && last_was_cr {
+                    last_was_cr = false;
+                    continue;
+                }
+                last_was_cr = b == b'\r';
+
                 let _ = usb_serial.write_all(b"\r\n").await;
                 let trimmed = line_buf.trim();
                 if !trimmed.is_empty() {
-                    let mut response: String<512> = String::new();
-                    let reboot = process_cli_command(trimmed, &mut response).await;
+                    let (response, reboot) = process_cli_command(trimmed).await;
                     send_c3(&mut usb_serial, response.as_str()).await;
                     if reboot {
                         Timer::after(Duration::from_millis(200)).await;
@@ -431,8 +478,12 @@ async fn usb_cli_c3_task(
                 }
                 line_buf.clear();
                 send_c3(&mut usb_serial, "kitt-eye> ").await;
-            } else if line_buf.len() < 120 {
-                let _ = line_buf.push(b as char);
+            } else {
+                last_was_cr = false;
+                let _ = usb_serial.write_all(&[b]).await;
+                if line_buf.len() < 120 {
+                    let _ = line_buf.push(b as char);
+                }
             }
         }
     }

@@ -250,30 +250,31 @@ fn eq_ignore_ascii(a: &str, b: &str) -> bool {
             .all(|(x, y)| x.to_ascii_lowercase() == y.to_ascii_lowercase())
 }
 
+/// Formatted help string for the USB Serial CLI.
+pub const HELP_TEXT: &str = "\
+--- K.I.T.T.-EYE USB Serial Commands ---\r\n\
+  state                     - Query current state & mode\r\n\
+  state <NAME>              - Set state directly (override on)\r\n\
+                              [idle|thinking|generating|executing_tool|waiting_input|done|error]\r\n\
+  state auto                - Release override, resume MQTT\r\n\
+  theme <classic|colorful>  - Set LED motion theme\r\n\
+  wifi <ssid> <pass>        - Set Wi-Fi credentials\r\n\
+  mqtt_broker <url|host>    - Set MQTT broker:\r\n\
+                              e.g. mqtt://user:pass@172.16.0.100:1883\r\n\
+                              e.g. 192.168.1.50 1883\r\n\
+  mqtt_topic <prefix>       - Set MQTT topic prefix\r\n\
+  mqtt-client_id <id>       - Set MQTT client ID\r\n\
+  status                    - Show system status\r\n\
+  config                    - Show current configuration\r\n\
+  save                      - Save configuration to storage\r\n\
+  load                      - Reload configuration from storage\r\n\
+  reset                     - Reset configuration to defaults\r\n\
+  reboot                    - Reboot MCU to apply network settings\r\n\
+  help, ?                   - Show this help\r\n";
+
 /// Format the help string into a buffer.
 pub fn write_help<const N: usize>(buf: &mut String<N>) {
-    let help_text = 
-"--- K.I.T.T.-EYE USB Serial Commands ---
-  state                     - Query current state & mode
-  state <NAME>              - Set state directly (override on)
-                              [idle|thinking|generating|executing_tool|waiting_input|done|error]
-  state auto                - Release override, resume MQTT
-  theme <classic|colorful>  - Set LED motion theme
-  wifi <ssid> <pass>        - Set Wi-Fi credentials
-  mqtt_broker <url|host>    - Set MQTT broker:
-                              e.g. mqtt://user:pass@172.16.0.100:1883
-                              e.g. 192.168.1.50 1883
-  mqtt_topic <prefix>       - Set MQTT topic prefix
-  mqtt-client_id <id>       - Set MQTT client ID
-  status                    - Show system status
-  config                    - Show current configuration
-  save                      - Save configuration to storage
-  load                      - Reload configuration from storage
-  reset                     - Reset configuration to defaults
-  reboot                    - Reboot MCU to apply network settings
-  help, ?                   - Show this help
-";
-    let _ = buf.push_str(help_text);
+    let _ = buf.push_str(HELP_TEXT);
 }
 
 #[cfg(test)]
@@ -286,6 +287,17 @@ mod tests {
         assert_eq!(parse_line("  ?  "), Ok(CliCommand::Help));
         assert_eq!(parse_line("status"), Ok(CliCommand::Status));
         assert_eq!(parse_line("STATUS"), Ok(CliCommand::Status));
+
+        // Test HELP_TEXT CRLF formatting and write_help buffer
+        let mut help_buf: String<2048> = String::new();
+        write_help(&mut help_buf);
+        assert_eq!(help_buf.as_str(), HELP_TEXT);
+        assert!(HELP_TEXT.contains("K.I.T.T.-EYE USB Serial Commands"));
+        for line in HELP_TEXT.split('\n') {
+            if !line.is_empty() {
+                assert!(line.ends_with('\r'), "Line missing \\r: {:?}", line);
+            }
+        }
     }
 
     #[test]
