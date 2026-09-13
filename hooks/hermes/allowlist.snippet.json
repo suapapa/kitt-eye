@@ -1,0 +1,17 @@
+{
+  "approvals": [
+    {"event": "on_session_start", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "on_session_end", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "on_session_reset", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "on_session_finalize", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "pre_llm_call", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "on_stream_start", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "on_stream_delta", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "pre_tool_call", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "post_tool_call", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "pre_approval_request", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "api_request_error", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "subagent_start", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"},
+    {"event": "subagent_stop", "command": "~/.kitt-eye/bin/kitt-eye-hermes-hook"}
+  ]
+}

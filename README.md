@@ -4,7 +4,7 @@
 
 > A homelab status monitoring system that captures lifecycle events from AI coding agents, aggregates their states via a Go daemon over MQTT, and visualizes them on an ESP32-S2 **K.I.T.T. scanner LED bar** (and Home Assistant).
 
-Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`) across multiple terminal tabs leaves you guessing: is the agent still thinking, executing a long bash tool, or blocked waiting for user approval?
+Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`, `hermes`) across multiple terminal tabs leaves you guessing: is the agent still thinking, executing a long bash tool, or blocked waiting for user approval?
 
 **kitt-eye** bridges this gap by turning an ESP32-S2 and an 8-LED NeoPixel strip into an iconic K.I.T.T. scanner on your desk, giving you peripheral awareness of your AI agents from across the room.
 
@@ -12,7 +12,7 @@ Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`
 
 ## 🌟 Highlights
 
-- **Multi-Agent CLI Support**: Native lifecycle hooks for Claude Code, OpenAI Codex CLI, Cursor CLI, and Antigravity CLI (`agy`).
+- **Multi-Agent CLI Support**: Native lifecycle hooks for Claude Code, OpenAI Codex CLI, Cursor CLI, Antigravity CLI (`agy`), and Hermes Agent.
 - **2 Expressive Motion Themes**:
   - **`classic`**: Pure Knight Rider K.I.T.T. scanner in iconic red (🔴). States are conveyed exclusively through movement patterns.
   - **`colorful`**: Vivid state color codes (e.g. Amber scanner, Mystic Purple breathing, Mint emerald waves, Warning yellow blink) for instant peripheral recognition.
@@ -55,7 +55,8 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
  ├── claude          (~/.claude/settings.json hook)
  ├── codex           (~/.codex/hooks.json hook)
  ├── cursor-cli      (~/.cursor/hooks.json hook)
- └── antigravity-cli (~/.gemini/config/hooks.json hook)
+ ├── antigravity-cli (~/.gemini/config/hooks.json hook)
+ └── hermes          (~/.hermes/config.yaml hook)
          │
          │  Unix Domain Socket (/tmp/kitt-eye.sock)
          │  NDJSON datagram (Fire-and-forget, silent stdout)
@@ -193,7 +194,7 @@ Install hooks into all supported AI CLI configurations with one idempotent comma
 ```bash
 make install-hooks
 ```
-*(Or individually: `make install-hooks-claude`, `make install-hooks-codex`, `make install-hooks-cursor-cli`, `make install-hooks-antigravity-cli`)*
+*(Or individually: `make install-hooks-claude`, `make install-hooks-codex`, `make install-hooks-cursor-cli`, `make install-hooks-antigravity-cli`, `make install-hooks-hermes`)*
 
 #### Configuration Locations & Post-Install Verification
 | CLI Agent | Config File | Post-Install Verification |
@@ -202,6 +203,7 @@ make install-hooks
 | **OpenAI Codex** | `~/.codex/hooks.json` | Run `/hooks` in session to **trust/approve** kitt-eye |
 | **Cursor CLI** | `~/.cursor/hooks.json` | Reloaded automatically by Cursor file watcher |
 | **Antigravity CLI** | `~/.gemini/config/hooks.json` | Verify workspace trust status |
+| **Hermes Agent** | `~/.hermes/config.yaml` | Run `hermes hooks list` to inspect active hooks |
 
 > To remove hooks: `make uninstall-hooks` (safely removes kitt-eye entries while preserving other custom user hooks).
 

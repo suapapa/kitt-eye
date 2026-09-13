@@ -35,3 +35,5 @@ agents:
     enabled: true
   - name: "cursor-cli"
     enabled: true
+  - name: "hermes"
+    enabled: true

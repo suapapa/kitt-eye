@@ -2,7 +2,7 @@
 	build-mcu build-mcu-c3 build-mcu-s2 \
 	flash-mcu flash-mcu-c3 flash-mcu-s2 \
 	install-hooks uninstall-hooks \
-	install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli \
+	install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli install-hooks-hermes \
 	test clean
 
 HELP_MSG = "Usage: make [target]\n\n\
@@ -27,6 +27,7 @@ Targets:\n\
   install-hooks-codex       Install Codex hooks only\n\
   install-hooks-cursor-cli  Install Cursor CLI hooks only\n\
   install-hooks-antigravity-cli  Install Antigravity CLI hooks only\n\
+  install-hooks-hermes      Install Hermes Agent hooks only\n\
   uninstall-hooks           Remove kitt-eye hooks from CLI settings + bins\n\
   test                      Run test suite across Go and both Rust components\n\
   clean                     Clean build artifacts\n"
@@ -90,7 +91,7 @@ flash-mcu-s2:
 	@echo "==> Flashing ESP32-S2 Rust firmware..."
 	cd mcu-rust-esp32s2 && ([ -f $(HOME)/export-esp.sh ] && . $(HOME)/export-esp.sh; cargo espflash flash --release --monitor --no-stub)
 
-install-hooks: install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli
+install-hooks: install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli install-hooks-hermes
 	@echo "==> All CLI hooks installed."
 
 install-hooks-claude:
@@ -108,6 +109,10 @@ install-hooks-cursor-cli:
 install-hooks-antigravity-cli:
 	@echo "==> Installing antigravity-cli hooks..."
 	@$(MERGE) install antigravity-cli
+
+install-hooks-hermes:
+	@echo "==> Installing hermes hooks..."
+	@$(MERGE) install hermes
 
 uninstall-hooks:
 	@echo "==> Uninstalling CLI hooks..."

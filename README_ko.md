@@ -4,7 +4,7 @@
 
 > AI 코딩 에이전트의 상태를 MQTT로 수집하여, ESP32-S2 기반 **K.I.T.T. 스캐너 LED 바**(및 Home Assistant)로 시각화하는 홈랩 모니터링 시스템
 
-여러 터미널에서 `claude`, `codex`, `cursor-cli`, `antigravity-cli` 같은 AI 에이전트를 동시에 실행해 두면, 지금 모델이 생각 중인지, 도구를 실행 중인지, 혹은 사용자의 입력/승인을 기다리고 있는지 터미널 창을 일일이 열어보지 않고는 알기 어렵습니다.
+여러 터미널에서 `claude`, `codex`, `cursor-cli`, `antigravity-cli`, `hermes` 같은 AI 에이전트를 동시에 실행해 두면, 지금 모델이 생각 중인지, 도구를 실행 중인지, 혹은 사용자의 입력/승인을 기다리고 있는지 터미널 창을 일일이 열어보지 않고는 알기 어렵습니다.
 
 **kitt-eye**는 에이전트의 라이프사이클 훅(Hook)을 감지하여 방 건너편에서도 데스크 위의 LED 바 하나로 현재 상태를 한눈에 파악할 수 있게 해줍니다.
 
@@ -12,7 +12,7 @@
 
 ## 🌟 주요 특징
 
-- **다양한 AI CLI 지원**: Claude Code, OpenAI Codex CLI, Cursor CLI, Antigravity CLI(`agy`) 공식 훅 지원.
+- **다양한 AI CLI 지원**: Claude Code, OpenAI Codex CLI, Cursor CLI, Antigravity CLI(`agy`), Hermes Agent 공식 훅 지원.
 - **2가지 LED 모션 테마**:
   - **`classic`**: 전설적인 '전격 Z작전(Knight Rider)'의 K.I.T.T. 오리지널 레드(🔴) 단색 테마. 모션 패턴으로 상태를 구분합니다.
   - **`colorful`**: 상태별 고유한 생생한 색상(앰버 K.I.T.T. 스캐너, 사이언 호흡, 옐로우 점멸 등)으로 직관적인 상태 식별.
@@ -59,7 +59,8 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
  ├── claude          (~/.claude/settings.json 훅)
  ├── codex           (~/.codex/hooks.json 훅)
  ├── cursor-cli      (~/.cursor/hooks.json 훅)
- └── antigravity-cli (~/.gemini/config/hooks.json 훅)
+ ├── antigravity-cli (~/.gemini/config/hooks.json 훅)
+ └── hermes          (~/.hermes/config.yaml 훅)
          │
          │  Unix Domain Socket (/tmp/kitt-eye.sock)
          │  JSON 단일 데이터그램 (Fire-and-Forget, stdout 무출력)
@@ -197,7 +198,7 @@ make demo-mqtt                           # 7개 전체 상태 자동 순환 데�
 ```bash
 make install-hooks
 ```
-*(개별 설치: `make install-hooks-claude`, `make install-hooks-codex`, `make install-hooks-cursor-cli`, `make install-hooks-antigravity-cli`)*
+*(개별 설치: `make install-hooks-claude`, `make install-hooks-codex`, `make install-hooks-cursor-cli`, `make install-hooks-antigravity-cli`, `make install-hooks-hermes`)*
 
 #### 도구별 설정 파일 및 확인 사항
 | CLI 도구 | 설정 파일 위치 | 설치 후 확인 방법 |
@@ -206,6 +207,7 @@ make install-hooks
 | **OpenAI Codex** | `~/.codex/hooks.json` | 세션에서 `/hooks` 열고 **kitt-eye 훅 승인(Trust)** |
 | **Cursor CLI** | `~/.cursor/hooks.json` | 파일 저장 즉시 반영 (Cursor IDE와 설정 공유) |
 | **Antigravity CLI** | `~/.gemini/config/hooks.json` | 워크스페이스 신뢰(trust) 상태 확인 |
+| **Hermes Agent** | `~/.hermes/config.yaml` | `hermes hooks list` 실행하여 등록 확인 |
 
 > 훅 제거 시: `make uninstall-hooks` (다른 개인 훅은 안전하게 보존하고 kitt-eye 훅만 깔끔하게 제거합니다).
 

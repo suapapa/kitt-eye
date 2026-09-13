@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # merge_hooks.sh — idempotent jq merge of kitt-eye hook snippets into CLI settings.
 # Usage:
-#   merge_hooks.sh install <claude|codex|cursor-cli|antigravity-cli>
-#   merge_hooks.sh uninstall <claude|codex|cursor-cli|antigravity-cli|all>
+#   merge_hooks.sh install <claude|codex|cursor-cli|antigravity-cli|hermes>
+#   merge_hooks.sh uninstall <claude|codex|cursor-cli|antigravity-cli|hermes|all>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -167,6 +167,105 @@ uninstall_agy() {
   jq 'del(.["kitt-eye"])' "$target" | atomic_write "$target"
 }
 
+# Hermes: YAML config (~/.hermes/config.yaml) + JSON allowlist (~/.hermes/shell-hooks-allowlist.json)
+merge_hermes() {
+  local target="${HOME}/.hermes/config.yaml"
+  local snippet="$1"
+  local allowlist_target="${HOME}/.hermes/shell-hooks-allowlist.json"
+  local allowlist_snippet="$2"
+
+  ensure_parent "$target"
+  if [ ! -f "$target" ]; then
+    printf '{}\n' >"$target"
+  fi
+  backup "$target"
+
+  if command -v yq >/dev/null 2>&1; then
+    yq eval -i '
+      .hooks[] |= (select(tag == "!!seq") |= map(select(.command != "*kitt-eye-hermes-hook*"))) |
+      .hooks |= with_entries(select(.value | length > 0))
+    ' "$target"
+    yq eval-all -i '. as $item ireduce ({}; . *+ $item)' "$target" "$snippet"
+  elif python3 -c 'import yaml' >/dev/null 2>&1; then
+    python3 - "$target" "$snippet" <<'EOF'
+import sys, yaml
+target, snippet = sys.argv[1], sys.argv[2]
+with open(target, 'r', encoding='utf-8') as f:
+    data = yaml.safe_load(f) or {}
+if not isinstance(data, dict):
+    data = {}
+hooks = data.setdefault('hooks', {})
+for k, v in list(hooks.items()):
+    if isinstance(v, list):
+        hooks[k] = [x for x in v if isinstance(x, dict) and 'kitt-eye-hermes-hook' not in str(x.get('command', ''))]
+        if not hooks[k]:
+            del hooks[k]
+with open(snippet, 'r', encoding='utf-8') as f:
+    snip = yaml.safe_load(f) or {}
+for k, v in (snip.get('hooks') or {}).items():
+    hooks.setdefault(k, []).extend(v)
+with open(target, 'w', encoding='utf-8') as f:
+    yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+EOF
+  else
+    die "yq or python3 with PyYAML is required to configure ~/.hermes/config.yaml (e.g. brew install yq)"
+  fi
+
+  ensure_parent "$allowlist_target"
+  if [ ! -f "$allowlist_target" ]; then
+    printf '{"approvals":[]}\n' >"$allowlist_target"
+  fi
+  backup "$allowlist_target"
+  local merged_allowlist
+  merged_allowlist="$(jq --slurpfile snip "$allowlist_snippet" '
+    ($snip[0].approvals // []) as $new_apps
+    | .approvals //= []
+    | .approvals |= map(select(((.command // "") | tostring | contains("kitt-eye-hermes-hook")) | not))
+    | .approvals += $new_apps
+  ' "$allowlist_target")"
+  printf '%s\n' "$merged_allowlist" | atomic_write "$allowlist_target"
+}
+
+uninstall_hermes() {
+  local target="${HOME}/.hermes/config.yaml"
+  local allowlist_target="${HOME}/.hermes/shell-hooks-allowlist.json"
+
+  if [ -f "$target" ]; then
+    backup "$target"
+    if command -v yq >/dev/null 2>&1; then
+      yq eval -i '
+        .hooks[] |= (select(tag == "!!seq") |= map(select(.command != "*kitt-eye-hermes-hook*"))) |
+        .hooks |= with_entries(select(.value | length > 0))
+      ' "$target"
+    elif python3 -c 'import yaml' >/dev/null 2>&1; then
+      python3 - "$target" <<'EOF'
+import sys, yaml
+target = sys.argv[1]
+with open(target, 'r', encoding='utf-8') as f:
+    data = yaml.safe_load(f) or {}
+if isinstance(data, dict) and 'hooks' in data and isinstance(data['hooks'], dict):
+    for k, v in list(data['hooks'].items()):
+        if isinstance(v, list):
+            data['hooks'][k] = [x for x in v if isinstance(x, dict) and 'kitt-eye-hermes-hook' not in str(x.get('command', ''))]
+            if not data['hooks'][k]:
+                del data['hooks'][k]
+    with open(target, 'w', encoding='utf-8') as f:
+        yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+EOF
+    fi
+  fi
+
+  if [ -f "$allowlist_target" ]; then
+    backup "$allowlist_target"
+    local unapproved
+    unapproved="$(jq '
+      .approvals //= []
+      | .approvals |= map(select(((.command // "") | tostring | contains("kitt-eye-hermes-hook")) | not))
+    ' "$allowlist_target")"
+    printf '%s\n' "$unapproved" | atomic_write "$allowlist_target"
+  fi
+}
+
 do_install() {
   need_jq
   install_bins
@@ -211,8 +310,17 @@ do_install() {
       echo "Installed antigravity-cli hooks → ~/.gemini/config/hooks.json (bundle: kitt-eye)"
       echo "  REQUIRED: workspace must be in trustedWorkspaces (agy /hooks)"
       ;;
+    hermes)
+      cp -f "$ROOT/hooks/hermes/hook.sh" "$BIN_DIR/kitt-eye-hermes-hook"
+      chmod +x "$BIN_DIR/kitt-eye-hermes-hook"
+      merge_hermes \
+        "$ROOT/hooks/hermes/hooks.snippet.yaml" \
+        "$ROOT/hooks/hermes/allowlist.snippet.json"
+      echo "Installed hermes hooks → ~/.hermes/config.yaml & ~/.hermes/shell-hooks-allowlist.json"
+      echo "  verify: hermes hooks list"
+      ;;
     *)
-      die "unknown agent '$AGENT' (claude|codex|cursor-cli|antigravity-cli)"
+      die "unknown agent '$AGENT' (claude|codex|cursor-cli|antigravity-cli|hermes)"
       ;;
   esac
 }
@@ -240,8 +348,13 @@ do_uninstall() {
       rm -f "$BIN_DIR/kitt-eye-agy-hook"
       echo "Removed antigravity-cli kitt-eye hooks"
       ;;
+    hermes)
+      uninstall_hermes
+      rm -f "$BIN_DIR/kitt-eye-hermes-hook"
+      echo "Removed hermes kitt-eye hooks"
+      ;;
     *)
-      die "unknown agent '$AGENT' (claude|codex|cursor-cli|antigravity-cli|all)"
+      die "unknown agent '$AGENT' (claude|codex|cursor-cli|antigravity-cli|hermes|all)"
       ;;
   esac
 }
@@ -252,6 +365,7 @@ do_uninstall_all() {
   uninstall_nested "${HOME}/.codex/hooks.json" "kitt-eye-codex-hook" || true
   uninstall_cursor || true
   uninstall_agy || true
+  uninstall_hermes || true
   rm -f "$BIN_DIR"/kitt-eye-*-hook "$BIN_DIR"/kitt-eye-send
   rmdir "$BIN_DIR" 2>/dev/null || true
   rmdir "${HOME}/.kitt-eye" 2>/dev/null || true
