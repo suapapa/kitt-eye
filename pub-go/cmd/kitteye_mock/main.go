@@ -298,9 +298,9 @@ func run() error {
 			fmt.Fprintf(os.Stderr, "  1. Check Wi-Fi / Local Network: Ensure this device is connected to the same LAN as %s.\n", broker)
 			fmt.Fprintf(os.Stderr, "  2. Check VPN: Active VPNs (Tailscale, Wireguard, etc.) may route 172.16.x.x through a tunnel.\n")
 			fmt.Fprintf(os.Stderr, "  3. Override Broker: If the broker IP changed or uses a hostname, use:\n")
-			fmt.Fprintf(os.Stderr, "       ./script/mock_state.sh -broker <ip_or_host>\n")
+			fmt.Fprintf(os.Stderr, "       ./scripts/demo-mqtt/demo.sh -broker <ip_or_host>\n")
 			fmt.Fprintf(os.Stderr, "  4. Terminal Dry-run: To demo states and patterns in terminal without MQTT:\n")
-			fmt.Fprintf(os.Stderr, "       ./script/mock_state.sh --dry-run\n\n")
+			fmt.Fprintf(os.Stderr, "       ./scripts/demo-mqtt/demo.sh --dry-run\n\n")
 			return connErr
 		}
 

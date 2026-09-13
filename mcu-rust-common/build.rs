@@ -34,6 +34,15 @@ fn main() {
     }
 
     let target = std::env::var("TARGET").unwrap_or_default();
+    println!("cargo:rustc-check-cfg=cfg(esp32s2)");
+    println!("cargo:rustc-check-cfg=cfg(esp32c3)");
+    if target.contains("esp32s2") || target.contains("xtensa") {
+        println!("cargo:rustc-cfg=esp32s2");
+    }
+    if target.contains("esp32c3") || target.contains("riscv32") {
+        println!("cargo:rustc-cfg=esp32c3");
+    }
+
     if target.contains("none-elf") {
         if target.contains("riscv32") {
             linker_be_nice();

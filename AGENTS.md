@@ -58,10 +58,16 @@ kitt-eye/
 │       ├── state/           # Session state store, TTLs, and aggregator
 │       ├── publish/         # Sink interface (MQTT & dry-run stdout sinks)
 │       └── mqtt/            # Paho MQTT v3 client, LWT, and HA discovery
-├── script/                  # Demo & mock state scripts
-│   ├── mock_state.sh        # Executable mock state generator (reads config.yaml)
-│   ├── demo.sh              # Shortcut symlink to mock_state.sh
-│   └── README.md            # Demo script documentation
+├── scripts/                 # Demo & mock state scripts
+│   ├── README.md            # Demo guides index
+│   ├── demo-mqtt/           # MQTT broker-based mock state demo
+│   │   ├── mock_state.sh    # Executable mock state generator (reads config.yaml)
+│   │   ├── demo.sh          # Shortcut symlink to mock_state.sh
+│   │   └── README.md        # MQTT demo documentation
+│   └── demo-serial/         # USB Serial port direct hardware demo
+│       ├── demo_serial.py   # Standalone Python 3 serial CLI & interactive controller
+│       ├── demo.sh          # Shell launcher for demo_serial.py
+│       └── README.md        # Serial demo documentation
 ├── mcu-rust-common/        # Shared MCU logic (no_std library: state, theme, patterns, mqtt, app_main)
 │   ├── Cargo.toml           # Core dependencies (smart-leds, embedded-io-async, heapless)
 │   ├── build.rs             # Unified build script (loads .env, sets cargo:rustc-env, linker flags)
@@ -106,10 +112,14 @@ make run-pub            # Runs publisher using config.yaml (stdout JSON sink if 
 ./hooks/common/send_event.sh claude done "All tests passed"
 
 # Mock state demo (simulates states without AI CLI agents or hooks)
-make demo               # Run automated state cycling demo using config.yaml
-./script/mock_state.sh -m workflow     # Run realistic agent pair-programming demo
-./script/mock_state.sh -m interactive  # Interactive keyboard menu to switch states
-./script/mock_state.sh thinking        # Publish single state directly to MQTT
+make demo-mqtt          # Run automated MQTT state cycling demo using config.yaml
+./scripts/demo-mqtt/demo.sh -m workflow    # Run realistic agent pair-programming demo via MQTT
+./scripts/demo-mqtt/demo.sh -m interactive # Interactive keyboard menu to switch states via MQTT
+./scripts/demo-mqtt/demo.sh thinking       # Publish single state directly to MQTT
+
+make demo-serial        # Run USB serial port direct hardware demo
+./scripts/demo-serial/demo.sh -m interactive # Interactive keyboard menu directly controlling LED bar
+./scripts/demo-serial/demo.sh -m console     # Direct interactive MCU CLI shell
 
 # CLI Hooks management (requires jq and nc)
 make install-hooks      # Idempotently inject hooks for all 4 supported CLIs

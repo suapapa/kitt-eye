@@ -1,4 +1,4 @@
-.PHONY: help build-pub run-pub build-sub run-sub build-mock run-mock demo \
+.PHONY: help build-pub run-pub build-sub run-sub build-mock run-mock demo demo-mqtt demo-serial \
 	build-mcu build-mcu-c3 build-mcu-s2 \
 	flash-mcu flash-mcu-c3 flash-mcu-s2 \
 	install-hooks uninstall-hooks \
@@ -12,8 +12,10 @@ Targets:\n\
   build-sub                 Build Go MQTT subscriber example (cmd/kitteye_sub_example)\n\
   run-sub                   Run MQTT subscriber example (shares config.yaml)\n\
   build-mock                Build Go mock state generator (cmd/kitteye_mock)\n\
-  run-mock                  Run mock state demo (shares config.yaml)\n\
-  demo                      Shortcut for run-mock (runs loop demo)\n\
+  run-mock                  Run MQTT mock state demo (shares config.yaml)\n\
+  demo                      Shortcut for demo-mqtt (runs loop demo)\n\
+  demo-mqtt                 Run MQTT broker mock state demo\n\
+  demo-serial               Run USB serial port direct hardware demo\n\
   build-mcu                 Build both ESP32-C3 and ESP32-S2 Rust firmwares\n\
   build-mcu-c3              Build ESP32-C3 Rust firmware\n\
   build-mcu-s2              Build ESP32-S2 Rust firmware\n\
@@ -55,10 +57,15 @@ build-mock:
 	cd pub-go && go build -o bin/kitt-eye-mock ./cmd/kitteye_mock
 
 run-mock: build-mock
-	@echo "==> Starting mock state demo..."
-	./script/mock_state.sh
+	@echo "==> Starting MQTT mock state demo..."
+	./scripts/demo-mqtt/mock_state.sh
 
 demo: run-mock
+demo-mqtt: run-mock
+
+demo-serial:
+	@echo "==> Starting USB serial direct demo..."
+	./scripts/demo-serial/demo.sh
 
 build-mcu: build-mcu-c3 build-mcu-s2
 

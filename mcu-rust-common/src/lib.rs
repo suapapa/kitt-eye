@@ -1,5 +1,6 @@
 #![no_std]
 
+pub mod cli;
 pub mod config;
 pub mod mqtt;
 pub mod patterns;

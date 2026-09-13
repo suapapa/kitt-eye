@@ -1,6 +1,6 @@
-# `script/` — Demo & Mock State Utilities
+# `scripts/demo-mqtt/` — MQTT Mock State Demo Utilities
 
-This directory provides scripts to simulate AI coding agent lifecycle states for demoing `kitt-eye` hardware (ESP32-C3 / ESP32-S2 NeoPixel LED bar) and Home Assistant integrations **without requiring real AI agent hook events** (Claude, Codex, Cursor, Antigravity).
+This directory provides scripts to simulate AI coding agent lifecycle states for demoing `kitt-eye` hardware (ESP32-C3 / ESP32-S2 NeoPixel LED bar) and Home Assistant integrations via MQTT **without requiring real AI agent hook events** (Claude, Codex, Cursor, Antigravity).
 
 ---
 
@@ -36,26 +36,28 @@ This directory provides scripts to simulate AI coding agent lifecycle states for
 
 ```bash
 # 1. Continuous state cycling (default, 3s interval)
-./script/mock_state.sh
+./scripts/demo-mqtt/mock_state.sh
+# or using shortcut:
+./scripts/demo-mqtt/demo.sh
 
 # 2. Change interval duration (e.g. 5s)
-./script/mock_state.sh -i 5s
+./scripts/demo-mqtt/mock_state.sh -i 5s
 
 # 3. Realistic agent coding workflow simulation
-./script/mock_state.sh -m workflow
+./scripts/demo-mqtt/mock_state.sh -m workflow
 
 # 4. Interactive mode (switch states on the fly via keyboard)
-./script/mock_state.sh -m interactive
+./scripts/demo-mqtt/mock_state.sh -m interactive
 
 # 5. One-shot state trigger (convenient for quick testing)
-./script/mock_state.sh thinking
-./script/mock_state.sh executing_tool
-./script/mock_state.sh done
-./script/mock_state.sh error
-./script/mock_state.sh idle
+./scripts/demo-mqtt/mock_state.sh thinking
+./scripts/demo-mqtt/mock_state.sh executing_tool
+./scripts/demo-mqtt/mock_state.sh done
+./scripts/demo-mqtt/mock_state.sh error
+./scripts/demo-mqtt/mock_state.sh idle
 
 # 6. Dry-run mode (output to terminal without MQTT connection)
-./script/mock_state.sh --dry-run
+./scripts/demo-mqtt/mock_state.sh --dry-run
 ```
 
 ---

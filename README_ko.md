@@ -26,7 +26,8 @@
   - LWT(Last Will and Testament)로 데몬 오프라인 상태 자동 감지.
   - Home Assistant MQTT Discovery 자동 센서 등록 지원.
 - **초경량 임베디드 펌웨어**:
-  - ESP32-S2 베어메탈 Rust (`esp-hal` + `embassy`), WS2812B NeoPixel 8구 LED 바 제어.
+  - ESP32-S2 및 ESP32-C3 베어메탈 Rust (`esp-hal` + `embassy`), WS2812B NeoPixel 8구 LED 바 제어.
+  - 온칩 USB 시리얼 CLI(USB-OTG CDC-ACM / USB-Serial-JTAG)를 통한 실시간 Wi-Fi/MQTT 설정, 테마 전환, 직접 LED 상태 제어 지원.
 
 ---
 
@@ -84,19 +85,19 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 > 보드별 상세 핀아웃 다이어그램과 트러블슈팅은 [하드웨어 연결 가이드](docs/hardware_wiring.md)를 참고하세요.
 
 ### 준비물
-- **ESP32-S2 개발 보드** (S2 Mini 등 Xtensa 코어 보드)
+- **ESP32-S2 또는 ESP32-C3 개발 보드** (S2 Mini, ESP32-C3-DevKit, NodeMCU 등)
 - **WS2812B NeoPixel 8구 LED 바** (또는 LED 스트립/링, 기본 8구 설정)
-- 점퍼 케이블 및 USB 케이블
+- 점퍼 케이블 및 USB-C 데이터 케이블
 
 ### 배선도
 
-| ESP32-S2 핀 | WS2812B LED 바 핀 | 비고 |
-|---|---|---|
-| **5V** (또는 3V3) | **VCC / 5V** | 8구 기준 3.3V로도 동작 가능하나 5V 권장 |
-| **GND** | **GND** | 공통 접지 |
-| **GPIO6** | **DIN (Data In)** | SPI2 MOSI 신호선으로 고속 데이터 전송 |
+| 핀 | ESP32-S2 | ESP32-C3 | WS2812B LED 바 핀 | 비고 |
+|---|---|---|---|---|
+| **전원** | **5V** (또는 3V3) | **5V** (또는 3V3) | **VCC / 5V** | 8구 기준 3.3V로도 동작 가능하나 5V 권장 |
+| **GND** | **GND** | **GND** | **GND** | 공통 접지 |
+| **DIN** | **GPIO6** | **GPIO6** | **DIN (Data In)** | SPI2 MOSI 신호선으로 고속 데이터 전송 |
 
-*(참고: GPIO4는 SPI Master 초기화용 SCK로 예약되어 있으나 배선은 필요하지 않습니다.)*
+*(참고: GPIO4는 내부 SPI Master 클록 초기화용으로 예약되어 있으나 배선은 필요하지 않습니다.)*
 
 ---
 
@@ -170,16 +171,22 @@ make run-sub
 
 ### 3b. 하드웨어 및 상태 데모 (AI Agent 훅 연동 없이 테스트)
 
-실제 AI CLI 에이전트 작업을 기다리지 않고 ESP32 LED 바의 애니메이션이나 Home Assistant 연동을 즉시 시연/테스트할 수 있습니다:
+실제 AI CLI 에이전트 작업을 기다리지 않고 ESP32 LED 바의 애니메이션이나 Home Assistant 연동을 즉시 시연/테스트할 수 있는 두 가지 데모 환경을 제공합니다:
 
 ```bash
-make demo                               # 7개 전체 상태 자동 순환 데모
-./script/mock_state.sh -m workflow      # 실제 AI 페어 프로그래밍 시나리오 데모
-./script/mock_state.sh -m interactive   # 숫자 키(1~7)로 실시간 상태 변경 메뉴
-./script/mock_state.sh thinking         # 특정 상태 단독 1회 발행
+# 1. USB 시리얼 직접 제어 데모 (브로커나 Wi-Fi 불필요!)
+make demo-serial                         # USB 시리얼 포트 직접 데모
+./scripts/demo-serial/demo.sh -m interactive # 대화형 키보드 메뉴 [1-7, a, t, s, q]
+./scripts/demo-serial/demo.sh thinking   # 특정 상태 단독 1회 즉시 지정
+
+# 2. MQTT 브로커 모의 상태 데모 (전체 네트워크 스택 테스트)
+make demo-mqtt                           # 7개 전체 상태 자동 순환 데모
+./scripts/demo-mqtt/demo.sh -m workflow  # 실제 AI 페어 프로그래밍 시나리오 데모
+./scripts/demo-mqtt/demo.sh -m interactive # 숫자 키(1~7)로 실시간 상태 변경 메뉴
+./scripts/demo-mqtt/demo.sh thinking     # 특정 상태 단독 1회 발행
 ```
 
-자세한 옵션과 사용법은 [`script/README.md`](script/README.md)를 참고하세요.
+자세한 옵션과 사용법은 [`scripts/README.md`](scripts/README.md), [`scripts/demo-serial/README.md`](scripts/demo-serial/README.md), 및 [`scripts/demo-mqtt/README.md`](scripts/demo-mqtt/README.md)를 참고하세요.
 
 ---
 
@@ -231,6 +238,63 @@ make flash-mcu-s2   # ESP32-S2 보드 플래시 (--no-stub 자동 적용)
 
 ---
 
+### 6. USB 시리얼 CLI 설정 및 직접 LED 제어
+
+**ESP32-S2**(내장 USB-OTG Full-Speed CDC-ACM) 및 **ESP32-C3**(내장 USB-Serial-JTAG)는 온칩 USB 포트를 통한 대화형 시리얼 CLI를 제공합니다. 펌웨어를 다시 빌드하거나 플래시하지 않고도 Wi-Fi 및 MQTT 브로커 설정을 런타임에 변경하고, 테마를 전환하거나 LED 상태를 직접 수동으로 테스트할 수 있습니다.
+
+#### 시리얼 터미널 연결
+
+보드를 USB 데이터 케이블로 PC에 연결한 후, **115200 baud** 속도로 시리얼 터미널을 엽니다:
+
+```bash
+# macOS
+picocom -b 115200 /dev/tty.usbmodem*
+# 또는 screen 사용:
+screen /dev/tty.usbmodem* 115200
+
+# Linux
+picocom -b 115200 /dev/ttyACM0
+
+# 또는 cargo espflash 모니터 사용 (두 보드 공통)
+cargo espflash monitor
+```
+
+`Enter` 키를 누르면 대화형 프롬프트가 표시됩니다:
+```text
+kitt-eye> 
+```
+
+#### CLI 명령어 목록
+
+| 명령어 | 설명 | 사용 예시 |
+|---|---|---|
+| `help` 또는 `?` | 전체 명령어 도움말 및 사용법 출력 | `help` |
+| `status` | 시스템 상태 종합 확인 (Wi-Fi, IP, MQTT 연결, 현재 상태 및 모드, 테마) | `status` |
+| `config` | 현재 런타임 설정값 확인 (SSID, 브로커, 토픽, 클라이언트 ID, 테마) | `config` |
+| `wifi <SSID> <PASS>` | Wi-Fi 접속 정보 변경 (RAM 임시 반영) | `wifi MyHomeWiFi SecretPass` |
+| `mqtt_broker <URL\|HOST> [PORT]` | MQTT 브로커 설정 (URL 포맷으로 ID/PW/포트 일괄 지정 또는 호스트/포트 지정) | `mqtt_broker mqtt://mqtt:896351@172.16.0.100`<br>`mqtt_broker 192.168.1.50 1883` |
+| `mqtt_topic <PREFIX>` | MQTT 구독 토픽 접두어 변경 (기본값: `kitt-eye`) | `mqtt_topic my-kitt` |
+| `mqtt-client_id <ID>` | MQTT 클라이언트 ID 변경 | `mqtt-client_id kitt-desk` |
+| `theme <classic\|colorful>` | LED 모션 테마 **실시간 전환** (재부팅 없이 다음 프레임에 즉시 반영) | `theme colorful` |
+| `state <NAME>` | **LED 상태 직접 수동 지정** (`state auto` 실행 전까지 무기한 고정 유지) | `state executing_tool` |
+| `state auto` | 수동 오버라이드 해제 및 MQTT 브로커 실시간 이벤트 추적 복귀 | `state auto` |
+| `save` | 현재 RAM 설정을 비휘발성 Flash 메모리에 영구 저장 | `save` |
+| `load` | Flash에 저장된 설정을 다시 불러와 RAM에 적용 | `load` |
+| `reset` | 컴파일 타임(`.env`) 기본값으로 설정 초기화 | `reset` |
+| `reboot` | MCU 재부팅 (새로 저장된 Wi-Fi / MQTT 설정 적용) | `reboot` |
+
+> [!TIP]
+> **네트워크 및 MQTT 설정 적용 흐름**:
+> Wi-Fi 및 브로커 변경 사항은 먼저 RAM에 임시 반영됩니다. 영구 저장 및 적용하려면:
+> 1. 정보 설정: `wifi MySSID MyPass` 또는 `mqtt_broker mqtt://user:pass@192.168.1.100:1883`
+> 2. Flash 저장: `save`
+> 3. 재부팅: `reboot` (MCU가 재기동되며 새 설정으로 자동 연결됩니다)
+>
+> **직접 LED 애니메이션 테스트**:
+> `state <NAME>` (`idle`, `thinking`, `generating`, `executing_tool`, `waiting_input`, `done`, `error`) 명령으로 AI 에이전트 작업 없이도 7가지 모션 애니메이션을 즉시 확인할 수 있습니다. 테스트가 끝나면 `state auto`를 입력하여 정상 모드로 복귀하세요.
+
+---
+
 ## 📡 MQTT 토픽 규격
 
 모든 상태 토픽은 **QoS 1, Retain** 플래그로 발행되어 네트워크가 재연결되거나 MCU가 늦게 켜져도 즉시 마지막 유효 상태를 유지합니다.
@@ -272,6 +336,8 @@ make clean                      # 빌드 산출물 정리
 - [English Documentation](README.md)
 - [PLAN.md](PLAN.md): 아키텍처 및 통신 프로토콜 상세 규격서
 - [AGENTS.md](AGENTS.md): AI 코딩 어시스턴트를 위한 개발 가이드 및 제약 사항
+- [docs/hardware_wiring.md](docs/hardware_wiring.md): 하드웨어 배선도 및 트러블슈팅 가이드
+- [docs/esp32s2_usb_serial_plan.md](docs/esp32s2_usb_serial_plan.md): USB 시리얼 CLI 설계 및 아키텍처
 
 ---
 

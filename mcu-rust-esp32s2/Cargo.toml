@@ -57,6 +57,8 @@ heapless = "0.8"
 esp-println = { version = "0.16", features = ["esp32s2", "log-04"] }
 log = "0.4"
 embedded-io-async = "0.7"
+embassy-usb = "0.6.0"
+esp-storage = { version = "0.8.0", features = ["esp32s2"] }
 
 smart-leds = "0.4.0"
 # mosi_idle_high + reset_single_transaction: crate README fix for

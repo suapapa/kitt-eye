@@ -24,7 +24,8 @@ Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`
   - LWT (Last Will and Testament) offline detection.
   - Home Assistant MQTT Discovery for instant entity configuration.
 - **Ultra-lightweight Embedded Firmware**:
-  - Bare-metal Rust (`no_std`, `esp-hal` + `embassy`) for ESP32-S2 controlling WS2812B NeoPixel LEDs.
+  - Bare-metal Rust (`no_std`, `esp-hal` + `embassy`) for ESP32-S2 and ESP32-C3 controlling WS2812B NeoPixel LEDs.
+  - Interactive on-chip USB Serial CLI (USB-OTG CDC-ACM / USB-Serial-JTAG) for runtime Wi-Fi & MQTT configuration, theme switching, and direct manual state control.
 
 ---
 
@@ -80,19 +81,19 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 > For detailed pinout diagrams and troubleshooting, see the [Hardware Wiring Guide](docs/hardware_wiring.md).
 
 ### Bill of Materials
-- **ESP32-S2 Development Board** (S2 Mini, NodeMCU, or any ESP32-S2 board)
+- **ESP32-S2 or ESP32-C3 Development Board** (S2 Mini, ESP32-C3-DevKit, NodeMCU, etc.)
 - **WS2812B NeoPixel 8-LED Bar** (strip or stick, default count: 8 LEDs)
-- Jumper wires and a USB-C cable
+- Jumper wires and a USB-C data cable
 
 ### Wiring Diagram
 
-| ESP32-S2 Pin | WS2812B LED Bar Pin | Notes |
-|---|---|---|
-| **5V** (or 3V3) | **VCC / 5V** | 5V recommended for full brightness |
-| **GND** | **GND** | Common ground |
-| **GPIO6** | **DIN (Data In)** | SPI2 MOSI hardware line for high-speed WS2812 timing |
+| Pin | ESP32-S2 | ESP32-C3 | WS2812B LED Bar Pin | Notes |
+|---|---|---|---|---|
+| **Power** | **5V** (or 3V3) | **5V** (or 3V3) | **VCC / 5V** | 5V recommended for full brightness |
+| **GND** | **GND** | **GND** | **GND** | Common ground |
+| **DIN** | **GPIO6** | **GPIO6** | **DIN (Data In)** | SPI2 MOSI hardware line for high-speed WS2812 timing |
 
-*(Note: GPIO4 is reserved internally for SPI master clock initialization, but no physical wiring to the LED bar is needed.)*
+*(Note: GPIO4 is reserved internally for SPI master clock initialization on both chips, but no physical wiring to the LED bar is needed.)*
 
 ---
 
@@ -166,16 +167,22 @@ make run-sub
 
 ### 3b. Hardware & State Demo (Without AI Agent Hooks)
 
-Want to test your ESP32 LED bar animations without waiting for real AI coding agents? Run the mock state generator:
+Want to test your ESP32 LED bar animations without waiting for real AI coding agents? We provide both MQTT and direct USB Serial demos:
 
 ```bash
-make demo                               # Automatic cycling across all 7 states
-./script/mock_state.sh -m workflow      # Realistic agent workflow demo
-./script/mock_state.sh -m interactive   # Interactive keyboard menu [1-7]
-./script/mock_state.sh thinking         # Publish single state directly
+# 1. Direct USB Serial Demo (No broker or Wi-Fi needed!)
+make demo-serial                         # Direct USB serial hardware demo
+./scripts/demo-serial/demo.sh -m interactive # Interactive keyboard menu [1-7, a, t, s, q]
+./scripts/demo-serial/demo.sh thinking   # Set single state directly
+
+# 2. MQTT Broker Simulation Demo (Full network stack)
+make demo-mqtt                           # Automatic cycling across all 7 states
+./scripts/demo-mqtt/demo.sh -m workflow  # Realistic agent workflow demo
+./scripts/demo-mqtt/demo.sh -m interactive # Interactive keyboard menu [1-7]
+./scripts/demo-mqtt/demo.sh thinking     # Publish single state directly
 ```
 
-See the [`script/README.md`](script/README.md) for full options and CLI arguments.
+See the [`scripts/README.md`](scripts/README.md), [`scripts/demo-serial/README.md`](scripts/demo-serial/README.md), and [`scripts/demo-mqtt/README.md`](scripts/demo-mqtt/README.md) for full options.
 
 ---
 
@@ -227,6 +234,63 @@ Now start coding with your favorite AI agent and watch your desk LED bar pulse a
 
 ---
 
+### 6. USB Serial Configuration & Manual LED Control
+
+Both **ESP32-S2** (via on-chip USB-OTG CDC-ACM) and **ESP32-C3** (via on-chip USB-Serial-JTAG) provide an interactive serial CLI over their USB-C port. You can configure Wi-Fi and MQTT credentials at runtime without editing `.env` or reflashing, switch motion themes in real time, and manually force LED states for testing.
+
+#### Connecting to the CLI
+
+Connect the board to your computer using a USB-C data cable and open a serial terminal at **115200 baud**:
+
+```bash
+# macOS
+picocom -b 115200 /dev/tty.usbmodem*
+# or using screen:
+screen /dev/tty.usbmodem* 115200
+
+# Linux
+picocom -b 115200 /dev/ttyACM0
+
+# Or via cargo espflash monitor (either board)
+cargo espflash monitor
+```
+
+Press `Enter` to display the interactive prompt:
+```text
+kitt-eye> 
+```
+
+#### Available CLI Commands
+
+| Command | Description | Example |
+|---|---|---|
+| `help` or `?` | Display available commands and usage | `help` |
+| `status` | Display Wi-Fi, IP, MQTT connection status, current state & mode, and active theme | `status` |
+| `config` | Show current runtime configuration (SSID, Broker, Topic, Client ID, Theme) | `config` |
+| `wifi <SSID> <PASS>` | Change Wi-Fi credentials (staged in RAM) | `wifi MyHomeWiFi SecretPass` |
+| `mqtt_broker <URL\|HOST> [PORT]` | Set MQTT broker (supports `mqtt://user:pass@host:port` or `host [port]`) | `mqtt_broker mqtt://mqtt:896351@172.16.0.100`<br>`mqtt_broker 192.168.1.50 1883` |
+| `mqtt_topic <PREFIX>` | Set MQTT subscription topic prefix (default: `kitt-eye`) | `mqtt_topic my-kitt` |
+| `mqtt-client_id <ID>` | Set MQTT client ID | `mqtt-client_id kitt-desk` |
+| `theme <classic\|colorful>` | Switch motion theme **instantly** (applied on next frame without rebooting) | `theme colorful` |
+| `state <NAME>` | **Manually force LED state** (held indefinitely until `state auto`) | `state executing_tool` |
+| `state auto` | Release manual override and return to tracking MQTT broker events | `state auto` |
+| `save` | Persist current RAM configuration to non-volatile Flash memory | `save` |
+| `load` | Reload saved configuration from Flash memory into RAM | `load` |
+| `reset` | Reset configuration back to compile-time (`.env`) defaults | `reset` |
+| `reboot` | Reboot MCU (re-initializes Wi-Fi and MQTT with saved settings) | `reboot` |
+
+> [!TIP]
+> **Applying Network Changes**:
+> Network and broker changes are staged in RAM first. To persist and apply:
+> 1. Update settings: `wifi MySSID MyPass` and/or `mqtt_broker mqtt://user:pass@192.168.1.100`
+> 2. Persist to flash: `save`
+> 3. Reboot: `reboot`
+>
+> **Testing LED Animations Directly**:
+> Run `state <NAME>` (`idle`, `thinking`, `generating`, `executing_tool`, `waiting_input`, `done`, `error`) to display any animation immediately without waiting for AI agent actions. Enter `state auto` to return to live MQTT monitoring.
+
+---
+
 ## 📡 MQTT Topic Reference
 
 All state topics are published with **QoS 1 and Retain flag** so late-joining devices (like the ESP32) receive the current state immediately.
@@ -268,6 +332,8 @@ make clean                      # Clean build artifacts
 - [Korean Documentation (한국어)](README_ko.md)
 - [PLAN.md](PLAN.md): Complete architecture specification & hook protocol details
 - [AGENTS.md](AGENTS.md): Developer & AI agent technical constraints and guidelines
+- [docs/hardware_wiring.md](docs/hardware_wiring.md): Hardware wiring diagram & troubleshooting
+- [docs/esp32s2_usb_serial_plan.md](docs/esp32s2_usb_serial_plan.md): USB Serial CLI design & architecture
 
 ---
 
