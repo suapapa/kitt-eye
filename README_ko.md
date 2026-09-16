@@ -170,28 +170,35 @@ make run-sub
 
 ---
 
-### 3a. Linux systemd 사용자 서비스(User Service)로 상시 실행
+### 3a. 백그라운드 사용자 서비스로 상시 실행 (Linux systemd 및 macOS launchd)
 
-터미널 창을 계속 띄워둘 필요 없이, `kitt-eye-pub`을 systemd 사용자 서비스로 등록하여 백그라운드에서 상시 실행할 수 있습니다:
+터미널 창을 계속 띄워둘 필요 없이, `kitt-eye-pub`을 백그라운드 사용자 서비스로 등록하여 상시 실행할 수 있습니다. Makefile이 **macOS**(`launchd`)와 **Linux**(`systemd`)를 자동으로 감지하여 알맞게 등록합니다:
 
 ```bash
 # 1. 서비스 빌드, 설치 및 시작
 make install-service
 
 # 2. 서비스 상태 확인
-make status-service    # 또는: systemctl --user status kitt-eye-pub.service
+make status-service    # macOS: launchctl list com.suapapa.kitt-eye-pub
+                       # Linux: systemctl --user status kitt-eye-pub.service
 
 # 3. 실시간 로그 확인
-make logs-service      # 또는: journalctl --user -u kitt-eye-pub.service -f
+make logs-service      # macOS: tail -f ~/Library/Logs/kitt-eye-pub.log
+                       # Linux: journalctl --user -u kitt-eye-pub.service -f
+
+# 4. 서비스 재시작
+make restart-service
 ```
 
 - 실행 바이너리: `~/.local/bin/kitt-eye-pub`
 - 설정 파일: `~/.config/kitt-eye/config.yaml`
 - 환경변수 설정: `~/.config/kitt-eye/env` (예: `KITTEYE_MQTT_PASSWORD=...`)
-- 서비스 유닛: `~/.config/systemd/user/kitt-eye-pub.service`
+- 서비스 정의 파일:
+  - macOS: `~/Library/LaunchAgents/com.suapapa.kitt-eye-pub.plist`
+  - Linux: `~/.config/systemd/user/kitt-eye-pub.service`
 
 > [!TIP]
-> SSH 세션을 종료하거나 시스템 부팅 후 로그인하지 않아도 데몬이 계속 실행되도록 하려면 링거(linger)를 활성화하세요:
+> **Linux 팁**: SSH 세션을 종료하거나 시스템 부팅 후 로그인하지 않아도 데몬이 계속 실행되도록 하려면 링거(linger)를 활성화하세요:
 > ```bash
 > loginctl enable-linger
 > ```
@@ -351,11 +358,11 @@ kitt-eye>
 make help                       # 전체 타깃 도움말 출력
 make build-pub                  # Go Publisher 빌드 -> pub-go/bin/kitt-eye-pub
 make run-pub                    # Go Publisher 데몬 로컬 실행
-make install-service            # Linux systemd 사용자 서비스 등록 및 시작
-make uninstall-service          # Linux systemd 사용자 서비스 중지 및 제거
-make status-service             # systemd 사용자 서비스 상태 확인
-make restart-service            # systemd 사용자 서비스 재시작
-make logs-service               # systemd 사용자 서비스 실시간 로그 확인
+make install-service            # Go publisher 사용자 서비스 등록 및 시작 (Linux systemd 또는 macOS launchd)
+make uninstall-service          # Go publisher 사용자 서비스 중지 및 제거
+make status-service             # 사용자 서비스 상태 확인
+make restart-service            # 사용자 서비스 재시작
+make logs-service               # 사용자 서비스 실시간 로그 확인
 make build-sub                  # MQTT 테스트 구독자 빌드 -> pub-go/bin/kitt-eye-sub
 make run-sub                    # MQTT 토픽 실시간 모니터링
 make build-mcu                  # ESP32-C3 & S2 펌웨어 일괄 빌드

@@ -166,28 +166,35 @@ make run-sub
 
 ---
 
-### 3a. Run as a Linux systemd User Service (Background Daemon)
+### 3a. Run as a Background User Service (Linux systemd or macOS launchd)
 
-Instead of keeping a terminal window open with `make run-pub`, you can install `kitt-eye-pub` as a systemd user service:
+Instead of keeping a terminal window open with `make run-pub`, you can install `kitt-eye-pub` as a persistent background user service. The Makefile automatically detects whether you are on **macOS** (`launchd`) or **Linux** (`systemd`):
 
 ```bash
 # 1. Build, install, and start the user service
 make install-service
 
 # 2. Check service status
-make status-service    # or: systemctl --user status kitt-eye-pub.service
+make status-service    # macOS: launchctl list com.suapapa.kitt-eye-pub
+                       # Linux: systemctl --user status kitt-eye-pub.service
 
 # 3. View live logs
-make logs-service      # or: journalctl --user -u kitt-eye-pub.service -f
+make logs-service      # macOS: tail -f ~/Library/Logs/kitt-eye-pub.log
+                       # Linux: journalctl --user -u kitt-eye-pub.service -f
+
+# 4. Restart service
+make restart-service
 ```
 
 - Service binary: `~/.local/bin/kitt-eye-pub`
 - Configuration file: `~/.config/kitt-eye/config.yaml`
 - Environment overrides: `~/.config/kitt-eye/env` (e.g. `KITTEYE_MQTT_PASSWORD=...`)
-- Unit file: `~/.config/systemd/user/kitt-eye-pub.service`
+- Service definitions:
+  - macOS: `~/Library/LaunchAgents/com.suapapa.kitt-eye-pub.plist`
+  - Linux: `~/.config/systemd/user/kitt-eye-pub.service`
 
 > [!TIP]
-> To keep the publisher running even after logging out of SSH or on system boot without interactive login:
+> **Linux Tip**: To keep the publisher running even after logging out of SSH or on system boot without interactive login:
 > ```bash
 > loginctl enable-linger
 > ```
@@ -347,11 +354,11 @@ All state topics are published with **QoS 1 and Retain flag** so late-joining de
 make help                       # Display all available targets
 make build-pub                  # Compile Go publisher -> pub-go/bin/kitt-eye-pub
 make run-pub                    # Run Go publisher daemon locally with config.yaml
-make install-service            # Install & start Go publisher as Linux systemd user service
-make uninstall-service          # Stop & remove Go publisher systemd user service
-make status-service             # Check systemd user service status
-make restart-service            # Restart systemd user service
-make logs-service               # Follow systemd user service logs
+make install-service            # Install & start Go publisher user service (Linux systemd or macOS launchd)
+make uninstall-service          # Stop & remove Go publisher user service
+make status-service             # Check user service status
+make restart-service            # Restart user service
+make logs-service               # Follow user service logs
 make build-sub                  # Compile MQTT subscriber example -> pub-go/bin/kitt-eye-sub
 make run-sub                    # Run subscriber example against config.yaml broker
 make build-mcu                  # Build both ESP32-C3 and ESP32-S2 firmwares

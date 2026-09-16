@@ -112,12 +112,12 @@ make run-pub            # Runs publisher locally using config.yaml (stdout JSON 
 ./hooks/common/send_event.sh claude executing_tool "Running tests"
 ./hooks/common/send_event.sh claude done "All tests passed"
 
-# Linux systemd user service management
-make install-service    # Install, enable, and start Go publisher as systemd user service
-make uninstall-service  # Stop, disable, and remove Go publisher systemd user service
-make status-service     # Check systemd user service status
-make logs-service       # Follow systemd user service logs (journalctl -f)
-make restart-service    # Restart systemd user service
+# Background user service management (Linux systemd or macOS launchd)
+make install-service    # Install, enable, and start Go publisher as user service
+make uninstall-service  # Stop, disable, and remove Go publisher user service
+make status-service     # Check user service status
+make logs-service       # Follow user service logs (tail -f or journalctl -f)
+make restart-service    # Restart user service
 
 # Mock state demo (simulates states without AI CLI agents or hooks)
 make demo-mqtt          # Run automated MQTT state cycling demo using config.yaml

@@ -6,6 +6,8 @@
 	install-hooks-claude install-hooks-codex install-hooks-cursor-cli install-hooks-antigravity-cli install-hooks-hermes \
 	test clean
 
+UNAME_S := $(shell uname -s)
+
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
 XDG_CONFIG_HOME ?= $(HOME)/.config
@@ -13,15 +15,21 @@ CONFIG_DIR ?= $(XDG_CONFIG_HOME)/kitt-eye
 SYSTEMD_USER_DIR ?= $(XDG_CONFIG_HOME)/systemd/user
 SERVICE_NAME := kitt-eye-pub.service
 
+# macOS launchd configuration
+LAUNCHD_USER_DIR ?= $(HOME)/Library/LaunchAgents
+LAUNCHD_LABEL := com.suapapa.kitt-eye-pub
+LAUNCHD_PLIST := $(LAUNCHD_LABEL).plist
+LOG_DIR ?= $(HOME)/Library/Logs
+
 HELP_MSG = "Usage: make [target]\n\n\
 Targets:\n\
   build-pub                 Build Go publisher daemon\n\
   run-pub                   Run Go publisher daemon locally\n\
-  install-service           Install & start Go publisher as Linux systemd user service\n\
-  uninstall-service         Stop & remove Go publisher systemd user service\n\
-  status-service            Check systemd user service status\n\
-  restart-service           Restart systemd user service\n\
-  logs-service              Follow systemd user service logs\n\
+  install-service           Install & start Go publisher user service (Linux systemd or macOS launchd)\n\
+  uninstall-service         Stop & remove Go publisher user service\n\
+  status-service            Check user service status\n\
+  restart-service           Restart user service\n\
+  logs-service              Follow user service logs\n\
   build-sub                 Build Go MQTT subscriber example (cmd/kitteye_sub_example)\n\
   run-sub                   Run MQTT subscriber example (shares config.yaml)\n\
   build-mock                Build Go mock state generator (cmd/kitteye_mock)\n\
@@ -59,12 +67,6 @@ run-pub: build-pub
 	./pub-go/bin/kitt-eye-pub --config config.yaml
 
 install-service: build-pub
-	@if [ "$$(uname -s)" != "Linux" ]; then \
-		echo "Warning: System is $$(uname -s). systemd user service is intended for Linux systems." >&2; \
-	fi
-	@command -v systemctl >/dev/null 2>&1 || { \
-		echo "Error: systemctl not found. This target requires Linux systemd." >&2; exit 1; \
-	}
 	@echo "==> Installing kitt-eye-pub binary to $(BINDIR)..."
 	@mkdir -p "$(BINDIR)"
 	@rm -f "$(BINDIR)/kitt-eye-pub"
@@ -91,6 +93,28 @@ install-service: build-pub
 		chmod 0600 "$(CONFIG_DIR)/env"; \
 		echo "    Created template $(CONFIG_DIR)/env"; \
 	fi
+ifeq ($(UNAME_S),Darwin)
+	@echo "==> Installing LaunchAgent to $(LAUNCHD_USER_DIR)..."
+	@mkdir -p "$(LAUNCHD_USER_DIR)"
+	@mkdir -p "$(LOG_DIR)"
+	@sed -e 's|__BINDIR__|$(BINDIR)|g' \
+	     -e 's|__CONFIG_DIR__|$(CONFIG_DIR)|g' \
+	     -e 's|__LOG_DIR__|$(LOG_DIR)|g' \
+	     -e 's|__HOME__|$(HOME)|g' \
+	     launchd/$(LAUNCHD_PLIST) > "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)"
+	@echo "==> Loading $(LAUNCHD_LABEL) with launchctl..."
+	@launchctl unload "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)" 2>/dev/null || true
+	@launchctl load -w "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)"
+	@echo ""
+	@echo "kitt-eye publisher LaunchAgent successfully installed and started!"
+	@echo "  Status : make status-service   (or launchctl list $(LAUNCHD_LABEL))"
+	@echo "  Logs   : make logs-service     (or tail -f $(LOG_DIR)/kitt-eye-pub.log)"
+	@echo "  Config : $(CONFIG_DIR)/config.yaml"
+	@echo "  Env    : $(CONFIG_DIR)/env"
+else ifeq ($(UNAME_S),Linux)
+	@command -v systemctl >/dev/null 2>&1 || { \
+		echo "Error: systemctl not found. This target requires Linux systemd." >&2; exit 1; \
+	}
 	@echo "==> Installing systemd user unit to $(SYSTEMD_USER_DIR)..."
 	@mkdir -p "$(SYSTEMD_USER_DIR)"
 	@sed -e 's|%h/.local/bin/kitt-eye-pub|$(subst $(HOME),%h,$(BINDIR))/kitt-eye-pub|g' \
@@ -110,10 +134,23 @@ install-service: build-pub
 	@echo ""
 	@echo "Tip: To keep user services running after logout / on boot without interactive login:"
 	@echo "     loginctl enable-linger"
+else
+	@echo "Error: Unsupported operating system: $(UNAME_S)" >&2; exit 1;
+endif
 
 install-user-service: install-service
 
 uninstall-service:
+ifeq ($(UNAME_S),Darwin)
+	@echo "==> Stopping and unloading $(LAUNCHD_LABEL)..."
+	@launchctl unload -w "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)" 2>/dev/null || true
+	@echo "==> Removing LaunchAgent plist..."
+	@rm -f "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)"
+	@echo "==> Removing binary $(BINDIR)/kitt-eye-pub..."
+	@rm -f "$(BINDIR)/kitt-eye-pub"
+	@echo "==> Service uninstalled."
+	@echo "Note: Configuration at $(CONFIG_DIR) was preserved."
+else ifeq ($(UNAME_S),Linux)
 	@command -v systemctl >/dev/null 2>&1 || { \
 		echo "Error: systemctl not found. This target requires Linux systemd." >&2; exit 1; \
 	}
@@ -126,15 +163,60 @@ uninstall-service:
 	@rm -f "$(BINDIR)/kitt-eye-pub"
 	@echo "==> Service uninstalled."
 	@echo "Note: Configuration at $(CONFIG_DIR) was preserved."
+else
+	@echo "Error: Unsupported operating system: $(UNAME_S)" >&2; exit 1;
+endif
 
 status-service:
+ifeq ($(UNAME_S),Darwin)
+	@echo "==> Checking LaunchAgent status for $(LAUNCHD_LABEL)..."
+	@if launchctl list $(LAUNCHD_LABEL) >/dev/null 2>&1; then \
+		launchctl list $(LAUNCHD_LABEL); \
+		echo ""; \
+		PID=$$(launchctl list $(LAUNCHD_LABEL) | awk '/"PID"/ {gsub(/[^0-9]/, ""); print}'); \
+		if [ -n "$$PID" ]; then \
+			echo "Status: Running (PID $$PID)"; \
+		else \
+			echo "Status: Loaded (Not currently running)"; \
+		fi; \
+	else \
+		echo "Service $(LAUNCHD_LABEL) is not loaded."; \
+		echo "Run 'make install-service' to install and start it."; \
+	fi
+else ifeq ($(UNAME_S),Linux)
 	@systemctl --user status $(SERVICE_NAME)
+else
+	@echo "Error: Unsupported operating system: $(UNAME_S)" >&2; exit 1;
+endif
 
 restart-service:
+ifeq ($(UNAME_S),Darwin)
+	@echo "==> Restarting $(LAUNCHD_LABEL)..."
+	@launchctl kickstart -k gui/$$(id -u)/$(LAUNCHD_LABEL) 2>/dev/null || { \
+		launchctl unload "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)" 2>/dev/null || true; \
+		launchctl load -w "$(LAUNCHD_USER_DIR)/$(LAUNCHD_PLIST)"; \
+	}
+	@echo "Service restarted."
+else ifeq ($(UNAME_S),Linux)
 	@systemctl --user restart $(SERVICE_NAME)
+else
+	@echo "Error: Unsupported operating system: $(UNAME_S)" >&2; exit 1;
+endif
 
 logs-service:
+ifeq ($(UNAME_S),Darwin)
+	@if [ ! -f "$(LOG_DIR)/kitt-eye-pub.log" ]; then \
+		echo "Creating $(LOG_DIR)/kitt-eye-pub.log..."; \
+		mkdir -p "$(LOG_DIR)"; \
+		touch "$(LOG_DIR)/kitt-eye-pub.log"; \
+	fi
+	@echo "==> Following $(LOG_DIR)/kitt-eye-pub.log (Ctrl+C to exit)..."
+	@tail -f "$(LOG_DIR)/kitt-eye-pub.log"
+else ifeq ($(UNAME_S),Linux)
 	@journalctl --user -u $(SERVICE_NAME) -f
+else
+	@echo "Error: Unsupported operating system: $(UNAME_S)" >&2; exit 1;
+endif
 
 log-service: logs-service
 
