@@ -30,6 +30,8 @@ pub enum CliCommand<'a> {
     StateAuto,
     /// Change motion theme (`classic` or `colorful`) immediately.
     SetTheme(MotionTheme),
+    /// Invert left-right LED direction (`true` or `false`).
+    SetReverse(bool),
     /// Set Wi-Fi credentials (`ssid`, `pass`).
     SetWifi { ssid: &'a str, pass: &'a str },
     /// Set MQTT broker URL or host with optional port and auth.
@@ -141,6 +143,10 @@ pub fn parse_line(input: &str) -> Result<CliCommand<'_>, &'static str> {
         let name = tokens.next().ok_or("usage: theme <classic|colorful>")?;
         let theme = parse_theme_arg(name)?;
         Ok(CliCommand::SetTheme(theme))
+    } else if eq_ignore_ascii(first, "reverse") {
+        let arg = tokens.next().ok_or("usage: reverse <on|off>")?;
+        let rev = parse_bool_arg(arg)?;
+        Ok(CliCommand::SetReverse(rev))
     } else if eq_ignore_ascii(first, "wifi") {
         let ssid = tokens.next().ok_or("usage: wifi <ssid> <pass>")?;
         let pass = tokens.next().unwrap_or("");
@@ -169,11 +175,15 @@ pub fn parse_line(input: &str) -> Result<CliCommand<'_>, &'static str> {
             Err("invalid state (valid: idle, thinking, generating, executing_tool, waiting_input, done, error, auto)")
         }
     } else if eq_ignore_ascii(first, "set") {
-        let sub = tokens.next().ok_or("usage: set <wifi|mqtt_broker|mqtt_topic|mqtt-client_id|theme> ...")?;
+        let sub = tokens.next().ok_or("usage: set <wifi|mqtt_broker|mqtt_topic|mqtt-client_id|theme|reverse> ...")?;
         if eq_ignore_ascii(sub, "theme") {
             let name = tokens.next().ok_or("usage: set theme <classic|colorful>")?;
             let theme = parse_theme_arg(name)?;
             Ok(CliCommand::SetTheme(theme))
+        } else if eq_ignore_ascii(sub, "reverse") {
+            let arg = tokens.next().ok_or("usage: set reverse <on|off>")?;
+            let rev = parse_bool_arg(arg)?;
+            Ok(CliCommand::SetReverse(rev))
         } else if eq_ignore_ascii(sub, "wifi") {
             let ssid = tokens.next().ok_or("usage: set wifi <ssid> <pass>")?;
             let pass = tokens.next().unwrap_or("");
@@ -206,7 +216,7 @@ pub fn parse_line(input: &str) -> Result<CliCommand<'_>, &'static str> {
                 Err("unknown target (valid: broker, topic, client_id)")
             }
         } else {
-            Err("unknown set target (valid: wifi, mqtt_broker, mqtt_topic, mqtt-client_id, theme)")
+            Err("unknown set target (valid: wifi, mqtt_broker, mqtt_topic, mqtt-client_id, theme, reverse)")
         }
     } else {
         Err("unknown command. Type 'help' or '?' for available commands.")
@@ -220,6 +230,16 @@ fn parse_theme_arg(arg: &str) -> Result<MotionTheme, &'static str> {
         Ok(MotionTheme::Colorful)
     } else {
         Err("invalid theme (valid: classic, colorful)")
+    }
+}
+
+fn parse_bool_arg(arg: &str) -> Result<bool, &'static str> {
+    if eq_ignore_ascii(arg, "on") || eq_ignore_ascii(arg, "true") || arg == "1" {
+        Ok(true)
+    } else if eq_ignore_ascii(arg, "off") || eq_ignore_ascii(arg, "false") || arg == "0" {
+        Ok(false)
+    } else {
+        Err("invalid boolean value (valid: on, off, true, false, 1, 0)")
     }
 }
 
@@ -258,6 +278,7 @@ pub const HELP_TEXT: &str = "\
                               [idle|thinking|generating|executing_tool|waiting_input|done|error]\r\n\
   state auto                - Release override, resume MQTT\r\n\
   theme <classic|colorful>  - Set LED motion theme\r\n\
+  reverse <on|off>          - Invert left-right LED direction\r\n\
   wifi <ssid> <pass>        - Set Wi-Fi credentials\r\n\
   mqtt_broker <url|host>    - Set MQTT broker:\r\n\
                               e.g. mqtt://user:pass@172.16.0.100:1883\r\n\
@@ -324,6 +345,19 @@ mod tests {
         assert_eq!(parse_line("set theme colorful"), Ok(CliCommand::SetTheme(MotionTheme::Colorful)));
         assert_eq!(parse_line("set theme red"), Ok(CliCommand::SetTheme(MotionTheme::Classic)));
         assert!(parse_line("theme foo").is_err());
+    }
+
+    #[test]
+    fn test_reverse_commands() {
+        assert_eq!(parse_line("reverse on"), Ok(CliCommand::SetReverse(true)));
+        assert_eq!(parse_line("reverse off"), Ok(CliCommand::SetReverse(false)));
+        assert_eq!(parse_line("reverse true"), Ok(CliCommand::SetReverse(true)));
+        assert_eq!(parse_line("reverse false"), Ok(CliCommand::SetReverse(false)));
+        assert_eq!(parse_line("reverse 1"), Ok(CliCommand::SetReverse(true)));
+        assert_eq!(parse_line("reverse 0"), Ok(CliCommand::SetReverse(false)));
+        assert_eq!(parse_line("set reverse on"), Ok(CliCommand::SetReverse(true)));
+        assert_eq!(parse_line("set reverse off"), Ok(CliCommand::SetReverse(false)));
+        assert!(parse_line("reverse invalid").is_err());
     }
 
     #[test]

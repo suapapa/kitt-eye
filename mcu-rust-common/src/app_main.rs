@@ -61,6 +61,9 @@ static MANUAL_OVERRIDE: AtomicBool = AtomicBool::new(false);
 /// Active motion theme: 0 = Classic, 1 = Colorful.
 static ACTIVE_THEME: AtomicU8 = AtomicU8::new(0);
 
+/// Reverse LED strip direction flag.
+static REVERSE_LEDS: AtomicBool = AtomicBool::new(false);
+
 /// Set by the Wi-Fi connection task; LED shows rainbow until this is true (unless manual override).
 static WIFI_CONNECTED: AtomicBool = AtomicBool::new(false);
 
@@ -156,14 +159,16 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
             let override_active = MANUAL_OVERRIDE.load(Ordering::Relaxed);
             let theme_val = ACTIVE_THEME.load(Ordering::Relaxed);
             let theme = if theme_val == 1 { "colorful" } else { "classic" };
+            let rev = REVERSE_LEDS.load(Ordering::Relaxed);
 
             let _ = write!(
                 out,
-                "STATUS:\r\n  Wi-Fi: {}\r\n  State: {} (mode: {})\r\n  Theme: {}\r\n",
+                "STATUS:\r\n  Wi-Fi: {}\r\n  State: {} (mode: {})\r\n  Theme: {}\r\n  Reverse: {}\r\n",
                 if wifi_up { "connected" } else { "disconnected" },
                 state.as_str(),
                 if override_active { "MANUAL" } else { "AUTO(MQTT)" },
                 theme,
+                if rev { "on" } else { "off" },
             );
             (CliOutput::Buffer(out), false)
         }
@@ -205,6 +210,15 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
                 c.motion_theme = theme;
             });
             let _ = write!(out, "OK: theme switched to '{}'\r\n", theme.as_str());
+            (CliOutput::Buffer(out), false)
+        }
+        Ok(CliCommand::SetReverse(rev)) => {
+            let mut out = String::<512>::new();
+            REVERSE_LEDS.store(rev, Ordering::Relaxed);
+            update_runtime_config(|c| {
+                c.reverse_leds = rev;
+            });
+            let _ = write!(out, "OK: LED reverse set to '{}'\r\n", if rev { "on" } else { "off" });
             (CliOutput::Buffer(out), false)
         }
         Ok(CliCommand::SetWifi { ssid, pass }) => {
@@ -268,9 +282,10 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
             } else {
                 "classic"
             };
+            let rev_str = if REVERSE_LEDS.load(Ordering::Relaxed) { "on" } else { "off" };
             let _ = write!(
                 out,
-                "CONFIG:\r\n  SSID: {}\r\n  PASS: {}\r\n  Broker: {}:{}\r\n  User: {}\r\n  Topic: {}\r\n  Client ID: {}\r\n  Theme: {}\r\n",
+                "CONFIG:\r\n  SSID: {}\r\n  PASS: {}\r\n  Broker: {}:{}\r\n  User: {}\r\n  Topic: {}\r\n  Client ID: {}\r\n  Theme: {}\r\n  Reverse: {}\r\n",
                 cfg.ssid.as_str(),
                 if cfg.pass.is_empty() { "(none)" } else { "********" },
                 cfg.mqtt_broker.as_str(),
@@ -279,6 +294,7 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
                 cfg.mqtt_topic_prefix.as_str(),
                 cfg.mqtt_client_id.as_str(),
                 theme_str,
+                rev_str,
             );
             (CliOutput::Buffer(out), false)
         }
@@ -300,6 +316,7 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
             Some(loaded) => {
                 let theme_val = if loaded.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
                 ACTIVE_THEME.store(theme_val, Ordering::Relaxed);
+                REVERSE_LEDS.store(loaded.reverse_leds, Ordering::Relaxed);
                 set_runtime_config(loaded);
                 (
                     CliOutput::Static("OK: configuration loaded from flash.\r\n"),
@@ -315,6 +332,7 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
             let def = RuntimeConfig::from_env_defaults();
             let theme_val = if def.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
             ACTIVE_THEME.store(theme_val, Ordering::Relaxed);
+            REVERSE_LEDS.store(def.reverse_leds, Ordering::Relaxed);
             set_runtime_config(def);
             (
                 CliOutput::Static("OK: configuration reset to defaults. Type 'save' to persist.\r\n"),
@@ -522,12 +540,15 @@ async fn main(spawner: Spawner) -> ! {
     };
 
     let theme = initial_config.motion_theme;
+    let reverse = initial_config.reverse_leds;
     ACTIVE_THEME.store(if theme == MotionTheme::Colorful { 1 } else { 0 }, Ordering::Relaxed);
+    REVERSE_LEDS.store(reverse, Ordering::Relaxed);
     let mut engine = LedEngine::new(theme);
+    engine.set_reverse(reverse);
     set_runtime_config(initial_config);
 
     esp_println::logger::init_logger_from_env();
-    println!("kitt-eye boot (theme: {})", theme.as_str());
+    println!("kitt-eye boot (theme: {}, reverse: {})", theme.as_str(), reverse);
 
     // Same wiring as before: GPIO4=SCK (unused), GPIO6=MOSI→DIN.
     let spi = Spi::new(
@@ -627,6 +648,7 @@ async fn main(spawner: Spawner) -> ! {
             MotionTheme::Classic
         };
         engine.set_theme(current_theme);
+        engine.set_reverse(REVERSE_LEDS.load(Ordering::Relaxed));
 
         let show_state = wifi_up || manual_override;
 

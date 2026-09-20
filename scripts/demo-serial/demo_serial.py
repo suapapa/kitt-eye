@@ -367,13 +367,14 @@ def read_single_key():
 def run_interactive(sp: SerialPort, theme_opt: str = None):
     """Interactive menu where pressing a key immediately sends the command."""
     current_theme = theme_opt or "colorful"
+    current_reverse = False
     if theme_opt:
         sp.send_command(f"theme {theme_opt}")
 
     def print_menu():
         print(f"\n{BOLD}{'=' * 70}{RESET}")
         print(f"{BOLD}  K.I.T.T.-EYE USB Serial Demo — Interactive Mode{RESET}")
-        print(f"  Port: {CYAN}{sp.port}{RESET} (115200 baud) | Theme: {MAGENTA}{current_theme}{RESET}")
+        print(f"  Port: {CYAN}{sp.port}{RESET} (115200 baud) | Theme: {MAGENTA}{current_theme}{RESET} | Reverse: {CYAN}{'on' if current_reverse else 'off'}{RESET}")
         print(f"{BOLD}{'=' * 70}{RESET}")
         print(f"  {RED}[1] IDLE{RESET}           - Slow Scanner (Standby)")
         print(f"  {MAGENTA}[2] THINKING{RESET}       - Mystic Purple (Center-Out)")
@@ -385,12 +386,13 @@ def run_interactive(sp: SerialPort, theme_opt: str = None):
         print(f"  {DIM}{'-' * 68}{RESET}")
         print(f"  {CYAN}[a]{RESET} state auto     - Release override, resume MQTT")
         print(f"  {CYAN}[t]{RESET} toggle theme   - Switch between 'classic' and 'colorful'")
+        print(f"  {CYAN}[r]{RESET} toggle reverse - Invert left-right LED direction")
         print(f"  {CYAN}[s]{RESET} status         - Query device status")
         print(f"  {CYAN}[c]{RESET} config         - Query device runtime configuration")
         print(f"  {CYAN}[?]{RESET} help           - Show MCU firmware CLI help")
         print(f"  {CYAN}[q]{RESET} quit           - Exit demo (resumes auto state)")
         print(f"{BOLD}{'=' * 70}{RESET}")
-        print(f"Press key [1-7, a, t, s, c, ?, q]: ", end="", flush=True)
+        print(f"Press key [1-7, a, t, r, s, c, ?, q]: ", end="", flush=True)
 
     print_menu()
     try:
@@ -428,6 +430,13 @@ def run_interactive(sp: SerialPort, theme_opt: str = None):
                     current_theme = "classic" if current_theme == "colorful" else "colorful"
                     print(f"\n--> Switching theme: {MAGENTA}{current_theme}{RESET}")
                     resp = sp.send_command(f"theme {current_theme}")
+                    if resp:
+                        print(f"    {resp}")
+                elif key in ("r", "R"):
+                    current_reverse = not current_reverse
+                    arg = "on" if current_reverse else "off"
+                    print(f"\n--> Toggling reverse: {CYAN}{arg}{RESET}")
+                    resp = sp.send_command(f"reverse {arg}")
                     if resp:
                         print(f"    {resp}")
                 elif key in ("s", "S"):

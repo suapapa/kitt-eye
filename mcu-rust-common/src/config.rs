@@ -8,6 +8,14 @@ pub const PASS: &str = env!("PASS");
 /// Motion theme name (`classic` = all-red state→motion map, `colorful` = vivid color-coded theme).
 pub const MOTION_THEME: &str = env!("MOTION_THEME");
 
+/// Invert left-right LED direction (`true` or `false`).
+pub const LED_REVERSE: &str = env!("LED_REVERSE");
+
+/// Parse `LED_REVERSE` (defaults to false).
+pub fn led_reverse() -> bool {
+    LED_REVERSE.eq_ignore_ascii_case("true") || LED_REVERSE == "1"
+}
+
 /// MQTT broker hostname or IPv4 literal.
 pub const MQTT_BROKER: &str = env!("MQTT_BROKER");
 /// MQTT TCP port (decimal string, parsed at runtime).
@@ -35,6 +43,7 @@ pub struct RuntimeConfig {
     pub ssid: String<32>,
     pub pass: String<64>,
     pub motion_theme: MotionTheme,
+    pub reverse_leds: bool,
     pub mqtt_broker: String<64>,
     pub mqtt_port: u16,
     pub mqtt_user: String<32>,
@@ -77,6 +86,7 @@ impl RuntimeConfig {
             ssid,
             pass,
             motion_theme: MotionTheme::from_name(MOTION_THEME),
+            reverse_leds: led_reverse(),
             mqtt_broker,
             mqtt_port: mqtt_port(),
             mqtt_user,
@@ -91,7 +101,11 @@ impl RuntimeConfig {
         buf.fill(0);
         buf[0..4].copy_from_slice(b"KITT");
         buf[4] = 1; // Version
-        buf[5] = if self.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
+        let mut flags = if self.motion_theme == MotionTheme::Colorful { 1 } else { 0 };
+        if self.reverse_leds {
+            flags |= 2;
+        }
+        buf[5] = flags;
         buf[6..8].copy_from_slice(&self.mqtt_port.to_le_bytes());
 
         let mut pos = 8;
@@ -129,7 +143,8 @@ impl RuntimeConfig {
             return None;
         }
 
-        let theme = if buf[5] == 1 { MotionTheme::Colorful } else { MotionTheme::Classic };
+        let theme = if (buf[5] & 1) == 1 { MotionTheme::Colorful } else { MotionTheme::Classic };
+        let reverse_leds = (buf[5] & 2) != 0;
         let port = u16::from_le_bytes([buf[6], buf[7]]);
 
         let mut pos = 8;
@@ -170,6 +185,7 @@ impl RuntimeConfig {
             ssid,
             pass,
             motion_theme: theme,
+            reverse_leds,
             mqtt_broker,
             mqtt_port: port,
             mqtt_user,
@@ -192,6 +208,7 @@ mod tests {
         cfg.pass.clear();
         let _ = cfg.pass.push_str("SecretPass123");
         cfg.motion_theme = MotionTheme::Colorful;
+        cfg.reverse_leds = true;
         cfg.mqtt_port = 8883;
 
         let mut buf = [0u8; 512];
@@ -201,6 +218,7 @@ mod tests {
         assert_eq!(loaded.ssid.as_str(), "CustomSSID");
         assert_eq!(loaded.pass.as_str(), "SecretPass123");
         assert_eq!(loaded.motion_theme, MotionTheme::Colorful);
+        assert!(loaded.reverse_leds);
         assert_eq!(loaded.mqtt_port, 8883);
         assert_eq!(loaded.mqtt_broker.as_str(), cfg.mqtt_broker.as_str());
     }

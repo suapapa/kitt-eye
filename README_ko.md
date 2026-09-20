@@ -269,6 +269,7 @@ cd mcu-rust-esp32s2 && cp .env.example .env
 # PASS="MyPassword"
 # MQTT_BROKER="homeassistant.local"
 # MOTION_THEME="colorful"   # 'classic' 또는 'colorful'
+# LED_REVERSE="false"       # 'true' 설정 시 LED 좌우 방향 반전
 
 # 칩에 맞는 타깃으로 빌드 및 플래시:
 make flash-mcu-c3   # ESP32-C3 보드 플래시
@@ -318,6 +319,7 @@ kitt-eye>
 | `mqtt_topic <PREFIX>` | MQTT 구독 토픽 접두어 변경 (기본값: `kitt-eye`) | `mqtt_topic my-kitt` |
 | `mqtt-client_id <ID>` | MQTT 클라이언트 ID 변경 | `mqtt-client_id kitt-desk` |
 | `theme <classic\|colorful>` | LED 모션 테마 **실시간 전환** (재부팅 없이 다음 프레임에 즉시 반영) | `theme colorful` |
+| `reverse <on\|off>` | LED 바 좌우 방향 **실시간 반전** (재부팅 없이 다음 프레임에 즉시 반영) | `reverse on` |
 | `state <NAME>` | **LED 상태 직접 수동 지정** (`state auto` 실행 전까지 무기한 고정 유지) | `state executing_tool` |
 | `state auto` | 수동 오버라이드 해제 및 MQTT 브로커 실시간 이벤트 추적 복귀 | `state auto` |
 | `save` | 현재 RAM 설정을 비휘발성 Flash 메모리에 영구 저장 | `save` |

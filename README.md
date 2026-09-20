@@ -265,6 +265,7 @@ cd mcu-rust-esp32s2 && cp .env.example .env
 # PASS="SecretWiFiPassword"
 # MQTT_BROKER="homeassistant.local"
 # MOTION_THEME="colorful"   # 'classic' or 'colorful'
+# LED_REVERSE="false"       # 'true' to invert left-right direction
 
 # Flash to connected board:
 make flash-mcu-c3   # Flash connected ESP32-C3 board
@@ -314,6 +315,7 @@ kitt-eye>
 | `mqtt_topic <PREFIX>` | Set MQTT subscription topic prefix (default: `kitt-eye`) | `mqtt_topic my-kitt` |
 | `mqtt-client_id <ID>` | Set MQTT client ID | `mqtt-client_id kitt-desk` |
 | `theme <classic\|colorful>` | Switch motion theme **instantly** (applied on next frame without rebooting) | `theme colorful` |
+| `reverse <on\|off>` | Invert left-right LED direction **instantly** (applied on next frame) | `reverse on` |
 | `state <NAME>` | **Manually force LED state** (held indefinitely until `state auto`) | `state executing_tool` |
 | `state auto` | Release manual override and return to tracking MQTT broker events | `state auto` |
 | `save` | Persist current RAM configuration to non-volatile Flash memory | `save` |

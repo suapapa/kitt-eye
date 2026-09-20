@@ -57,6 +57,9 @@ fn main() {
     // Motion theme (classic = red-only state→motion map)
     emit_env("MOTION_THEME", None, Some("classic"));
 
+    // LED strip direction (reverse = true/false)
+    emit_env("LED_REVERSE", Some("REVERSE_LEDS"), Some("false"));
+
     // MQTT
     emit_env("MQTT_BROKER", None, None);
     emit_env("MQTT_PORT", None, Some("1883"));

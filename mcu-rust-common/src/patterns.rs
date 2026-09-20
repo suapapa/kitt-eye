@@ -45,6 +45,8 @@ pub struct LedEngine {
     state: AgentState,
     pattern: PatternId,
     pixels: [RGB8; LED_COUNT],
+    out_pixels: [RGB8; LED_COUNT],
+    reverse: bool,
     /// Pattern-local phase / position.
     phase: u16,
     /// Direction for bounce/sweep (-1 / +1) encoded as i8.
@@ -61,6 +63,8 @@ impl LedEngine {
             state,
             pattern: theme.pattern_for(state),
             pixels: [RGB8::new(0, 0, 0); LED_COUNT],
+            out_pixels: [RGB8::new(0, 0, 0); LED_COUNT],
+            reverse: false,
             phase: 0,
             dir: 1,
             aux: 0,
@@ -77,6 +81,14 @@ impl LedEngine {
 
     pub const fn pattern(&self) -> PatternId {
         self.pattern
+    }
+
+    pub const fn reverse(&self) -> bool {
+        self.reverse
+    }
+
+    pub fn set_reverse(&mut self, reverse: bool) {
+        self.reverse = reverse;
     }
 
     /// Frame delay for the active pattern (sweep motions use a slower tick).
@@ -128,13 +140,27 @@ impl LedEngine {
             PatternId::Flash => self.step_flash(color),
             PatternId::Comet => self.step_comet(color),
         }
-        &self.pixels
+        if self.reverse {
+            for i in 0..LED_COUNT {
+                self.out_pixels[i] = self.pixels[LED_COUNT - 1 - i];
+            }
+            &self.out_pixels
+        } else {
+            &self.pixels
+        }
     }
 
     /// Boot / Wi-Fi wait: rainbow gradient slides back and forth along the strip.
     pub fn step_wifi_wait(&mut self) -> &[RGB8; LED_COUNT] {
         self.step_rainbow_bounce();
-        &self.pixels
+        if self.reverse {
+            for i in 0..LED_COUNT {
+                self.out_pixels[i] = self.pixels[LED_COUNT - 1 - i];
+            }
+            &self.out_pixels
+        } else {
+            &self.pixels
+        }
     }
 
     /// Reset animation state before showing the Wi-Fi wait rainbow.
@@ -410,5 +436,26 @@ mod tests {
         assert!(saw_nonzero);
         eng.sync_state(AgentState::Idle);
         assert_eq!(eng.pattern(), PatternId::SlowScanner);
+    }
+
+    #[test]
+    fn test_engine_reverse() {
+        let mut normal_eng = LedEngine::new(MotionTheme::Classic);
+        let mut rev_eng = LedEngine::new(MotionTheme::Classic);
+        rev_eng.set_reverse(true);
+        assert!(!normal_eng.reverse());
+        assert!(rev_eng.reverse());
+
+        normal_eng.set_state(AgentState::ExecutingTool);
+        rev_eng.set_state(AgentState::ExecutingTool);
+
+        // Step both engines and check that pixels are mirrored
+        for _ in 0..10 {
+            let normal_frame = normal_eng.step();
+            let rev_frame = rev_eng.step();
+            for i in 0..LED_COUNT {
+                assert_eq!(normal_frame[i], rev_frame[LED_COUNT - 1 - i]);
+            }
+        }
     }
 }
