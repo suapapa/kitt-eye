@@ -140,7 +140,7 @@ module lower_part() {
     
     difference() {
         translate([-XE,-W/2,-2]) cube([XE*2,W,2]);
-        translate([0,0,-H/2]) usb_c();
+        translate([50,0,-H/2]) usb_c();
         for(i=[-20,20]) {
             translate([i,W/2-8/2-2,8/2]) 
                 cylinder(h=20, r=3.2/2, $fn=20, center=true);
