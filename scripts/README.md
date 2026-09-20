@@ -10,10 +10,14 @@ scripts/
 │   ├── mock_state.sh        # Executable mock state publisher (reads config.yaml)
 │   ├── demo.sh              # Shortcut symlink to mock_state.sh
 │   └── README.md            # Detailed MQTT demo documentation
-└── demo-serial/             # Demo 2: USB Serial port-based direct control (No broker/Wi-Fi needed)
-    ├── demo_serial.py       # Standalone Python 3 serial CLI & interactive controller (no deps)
-    ├── demo.sh              # Shell launcher for demo_serial.py
-    └── README.md            # Detailed Serial demo documentation
+├── demo-serial/             # Demo 2: USB Serial port-based direct control (No broker/Wi-Fi needed)
+│   ├── demo_serial.py       # Standalone Python 3 serial CLI & interactive controller (no deps)
+│   ├── demo.sh              # Shell launcher for demo_serial.py
+│   └── README.md            # Detailed Serial demo documentation
+└── config-serial/           # USB Serial configuration tool (Theme, reverse, Wi-Fi, MQTT, Flash)
+    ├── config_serial.py     # Standalone Python 3 configuration CLI & interactive menu (no deps)
+    ├── config.sh            # Shell launcher for config_serial.py
+    └── README.md            # Detailed Serial configuration documentation
 ```
 
 ---
@@ -79,3 +83,21 @@ Simulate AI agent lifecycle states published to your Home Assistant / Mosquitto 
 ```
 
 See the [MQTT Demo Guide](demo-mqtt/README.md) for full options.
+
+---
+
+### 3. Direct USB Serial Configuration (`scripts/config-serial/`)
+Configure runtime settings (theme, reverse, Wi-Fi, MQTT) directly over USB without recompiling or network access:
+
+```bash
+# Query status and configuration
+./scripts/config-serial/config.sh --status --config
+
+# Change theme and LED direction and persist to Flash
+./scripts/config-serial/config.sh --theme classic --reverse on --save
+
+# Interactive terminal configuration menu
+./scripts/config-serial/config.sh -i
+```
+
+See the [Serial Configuration Guide](config-serial/README.md) for full options.

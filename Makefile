@@ -1,4 +1,4 @@
-.PHONY: help build-pub run-pub build-sub run-sub build-mock run-mock demo demo-mqtt demo-serial \
+.PHONY: help build-pub run-pub build-sub run-sub build-mock run-mock demo demo-mqtt demo-serial config-serial \
 	install-service install-user-service uninstall-service status-service restart-service logs-service log-service \
 	build-mcu build-mcu-c3 build-mcu-s2 \
 	flash-mcu flash-mcu-c3 flash-mcu-s2 \
@@ -37,6 +37,7 @@ Targets:\n\
   demo                      Shortcut for demo-mqtt (runs loop demo)\n\
   demo-mqtt                 Run MQTT broker mock state demo\n\
   demo-serial               Run USB serial port direct hardware demo\n\
+  config-serial             Run USB serial configuration tool (interactive menu)\n\
   build-mcu                 Build both ESP32-C3 and ESP32-S2 Rust firmwares\n\
   build-mcu-c3              Build ESP32-C3 Rust firmware\n\
   build-mcu-s2              Build ESP32-S2 Rust firmware\n\
@@ -242,6 +243,10 @@ demo-mqtt: run-mock
 demo-serial:
 	@echo "==> Starting USB serial direct demo..."
 	./scripts/demo-serial/demo.sh
+
+config-serial:
+	@echo "==> Starting USB serial configuration tool..."
+	./scripts/config-serial/config.sh -i
 
 build-mcu: build-mcu-c3 build-mcu-s2
 

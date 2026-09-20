@@ -65,10 +65,14 @@ kitt-eye/
 │   │   ├── mock_state.sh    # Executable mock state generator (reads config.yaml)
 │   │   ├── demo.sh          # Shortcut symlink to mock_state.sh
 │   │   └── README.md        # MQTT demo documentation
-│   └── demo-serial/         # USB Serial port direct hardware demo
-│       ├── demo_serial.py   # Standalone Python 3 serial CLI & interactive controller
-│       ├── demo.sh          # Shell launcher for demo_serial.py
-│       └── README.md        # Serial demo documentation
+│   ├── demo-serial/         # USB Serial port direct hardware demo
+│   │   ├── demo_serial.py   # Standalone Python 3 serial CLI & interactive controller
+│   │   ├── demo.sh          # Shell launcher for demo_serial.py
+│   │   └── README.md        # Serial demo documentation
+│   └── config-serial/       # USB Serial configuration tool (theme, reverse, Wi-Fi, MQTT)
+│       ├── config_serial.py # Standalone Python 3 serial config CLI & interactive menu
+│       ├── config.sh        # Shell launcher for config_serial.py
+│       └── README.md        # Serial config documentation
 ├── mcu-rust-common/        # Shared MCU logic (no_std library: state, theme, patterns, mqtt, app_main)
 │   ├── Cargo.toml           # Core dependencies (smart-leds, embedded-io-async, heapless)
 │   ├── build.rs             # Unified build script (loads .env, sets cargo:rustc-env, linker flags)
@@ -128,6 +132,11 @@ make demo-mqtt          # Run automated MQTT state cycling demo using config.yam
 make demo-serial        # Run USB serial port direct hardware demo
 ./scripts/demo-serial/demo.sh -m interactive # Interactive keyboard menu directly controlling LED bar
 ./scripts/demo-serial/demo.sh -m console     # Direct interactive MCU CLI shell
+
+# Hardware configuration via USB Serial (Theme, reverse, Wi-Fi, MQTT)
+make config-serial      # Launch interactive configuration menu
+./scripts/config-serial/config.sh --status --config  # Query current device status & config
+./scripts/config-serial/config.sh --theme classic --reverse on --save  # Configure and persist to flash
 
 # CLI Hooks management (requires jq and nc)
 make install-hooks      # Idempotently inject hooks for all 5 supported CLIs
