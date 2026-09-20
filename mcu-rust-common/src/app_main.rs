@@ -13,7 +13,7 @@ use core::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
 use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_net::{dns::DnsQueryType, tcp::TcpSocket, DhcpConfig, Runner, Stack, StackResources};
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::{Duration, Instant, Timer, with_timeout};
 use esp_hal::{
     clock::CpuClock,
     interrupt::software::SoftwareInterruptControl,
@@ -804,7 +804,7 @@ async fn mqtt_task(stack: Stack<'static>) {
 
         let mut client = MqttClient::new(socket);
         if let Err(e) = client
-            .connect(&client_id, &user, &pass, 0)
+            .connect(&client_id, &user, &pass, 60)
             .await
         {
             println!("mqtt CONNECT failed: {e:?}");
@@ -819,8 +819,13 @@ async fn mqtt_task(stack: Stack<'static>) {
         println!("mqtt subscribed");
 
         loop {
-            match client.next_publish_payload(&mut payload).await {
-                Ok(n) => {
+            match with_timeout(
+                Duration::from_secs(15),
+                client.next_publish_payload(&mut payload),
+            )
+            .await
+            {
+                Ok(Ok(n)) => {
                     let bytes = &payload[..n];
                     let end = bytes
                         .iter()
@@ -853,9 +858,15 @@ async fn mqtt_task(stack: Stack<'static>) {
                         println!("unknown state payload");
                     }
                 }
-                Err(e) => {
+                Ok(Err(e)) => {
                     println!("mqtt read failed: {e:?}");
                     break;
+                }
+                Err(_timeout) => {
+                    if let Err(e) = client.ping().await {
+                        println!("mqtt ping failed: {e:?}");
+                        break;
+                    }
                 }
             }
         }

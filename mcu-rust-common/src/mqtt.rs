@@ -143,6 +143,12 @@ impl<T: Read + Write> MqttClient<T> {
         }
     }
 
+    /// Send MQTT PINGREQ packet ([0xc0, 0x00]).
+    pub async fn ping(&mut self) -> Result<(), MqttError> {
+        let pkt = [0xc0, 0x00];
+        write_all(&mut self.transport, &pkt).await
+    }
+
     async fn send_puback(&mut self, packet_id: u16) -> Result<(), MqttError> {
         let pkt = [
             0x40,
@@ -297,6 +303,101 @@ mod tests {
         let mut buf: Vec<u8, 32> = Vec::new();
         push_mqtt_string(&mut buf, "test").unwrap();
         assert_eq!(&buf[..], &[0x00, 0x04, b't', b'e', b's', b't']);
+    }
+
+    struct MockTransport {
+        read_buf: Vec<u8, 128>,
+        written: Vec<u8, 128>,
+    }
+
+    impl embedded_io_async::ErrorType for MockTransport {
+        type Error = core::convert::Infallible;
+    }
+
+    impl embedded_io_async::Read for MockTransport {
+        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+            if self.read_buf.is_empty() {
+                return Ok(0);
+            }
+            let n = self.read_buf.len().min(buf.len());
+            buf[..n].copy_from_slice(&self.read_buf[..n]);
+            let remaining = self.read_buf.len() - n;
+            for i in 0..remaining {
+                self.read_buf[i] = self.read_buf[n + i];
+            }
+            self.read_buf.truncate(remaining);
+            Ok(n)
+        }
+    }
+
+    impl embedded_io_async::Write for MockTransport {
+        async fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+            self.written
+                .extend_from_slice(buf)
+                .map_err(|_| panic!("written overflow"))
+                .unwrap();
+            Ok(buf.len())
+        }
+
+        async fn flush(&mut self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+    }
+
+    fn block_on<F: core::future::Future>(f: F) -> F::Output {
+        use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
+        unsafe fn dummy_raw_waker() -> RawWaker {
+            unsafe fn no_op(_: *const ()) {}
+            unsafe fn clone(_: *const ()) -> RawWaker {
+                unsafe { dummy_raw_waker() }
+            }
+            static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, no_op, no_op, no_op);
+            RawWaker::new(core::ptr::null(), &VTABLE)
+        }
+        let waker = unsafe { Waker::from_raw(dummy_raw_waker()) };
+        let mut cx = Context::from_waker(&waker);
+        let mut pinned = core::pin::pin!(f);
+        match pinned.as_mut().poll(&mut cx) {
+            Poll::Ready(val) => val,
+            Poll::Pending => panic!("future unexpectedly pending"),
+        }
+    }
+
+    #[test]
+    fn test_ping_sends_packet() {
+        block_on(async {
+            let transport = MockTransport {
+                read_buf: Vec::new(),
+                written: Vec::new(),
+            };
+            let mut client = MqttClient::new(transport);
+            client.ping().await.unwrap();
+            assert_eq!(&client.transport.written[..], &[0xc0, 0x00]);
+        });
+    }
+
+    #[test]
+    fn test_next_publish_payload_ignores_pingresp() {
+        block_on(async {
+            let mut transport = MockTransport {
+                read_buf: Vec::new(),
+                written: Vec::new(),
+            };
+            // 1. PINGRESP: 0xd0, 0x00
+            transport.read_buf.push(0xd0).unwrap();
+            transport.read_buf.push(0x00).unwrap();
+            // 2. PUBLISH QoS0 topic "t" payload "idle"
+            // 0x30, remaining 8: topic_len(2)=0x00,0x01, topic="t", payload="idle"
+            let publish_pkt = [0x30, 0x07, 0x00, 0x01, b't', b'i', b'd', b'l', b'e'];
+            for b in publish_pkt {
+                transport.read_buf.push(b).unwrap();
+            }
+
+            let mut client = MqttClient::new(transport);
+            let mut payload = [0u8; 32];
+            let n = client.next_publish_payload(&mut payload).await.unwrap();
+            assert_eq!(&payload[..n], b"idle");
+        });
     }
 }
 
