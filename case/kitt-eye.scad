@@ -5,16 +5,16 @@ ANG   = 10;
 Z0    = 50;
 T_SK  = 2;
 FUSE  = 0.6;
-Y_SPLIT    = 5.0;
+Y_SPLIT    = 4.5;
 Y_OUT_UP   = 11.5;
 BOSS_R     = 3.0; // 4
-BOSS_TOP_Y = 8.0;
+BOSS_TOP_Y = 8.4;
 BOSS_BOT_Y = -8.5;
 INS_D      = 3; // 4.1
 INS_DEPTH  = 9.0;
 INS_CHAM   = 0.1; //0.6;
 POCK_D     = (BOSS_R+0.2)*2; // 8.4;
-POCK_TOP_Y = 8.4;
+POCK_TOP_Y = BOSS_TOP_Y;
 POCK_BOT_Y = 4.75;
 SCREW_D    = 3.4;
 Y_SCREW_BOT = 2.5;
@@ -24,7 +24,7 @@ CSK_H      = (CSK_D - SCREW_D) / 2;
 BOSS_INSET     = 2; // 1.2;
 BOSS_END_INSET = BOSS_R + 1.0;
 module light() {
-    TX = 1; TY = 2; T = 1; DRAFT = 14; HOLE = 10;
+    TX = 1; TY = 2; T = 1; DRAFT = 14; HOLE = 9;
     d = (H - T) * tan(DRAFT);
     e = 1 * tan(DRAFT);
     module cavity() { hull() {
@@ -32,6 +32,12 @@ module light() {
         translate([TX - e, TY - e, H + 1]) cube([L - 2*TX + 2*e, W - 2*TY + 2*e, 0.001]); } }
     module floor_hole() { translate([(L - HOLE)/2, (W - HOLE)/2, -T/2]) cube([HOLE, HOLE, 2*T]); }
     translate([-L/2, 0, -H]) difference() { cube([L, W, H]); cavity(); floor_hole(); }
+    
+    PR=3/2;
+    PH=W/2;
+    for(x=[-7,7]) {
+        translate([x,PH/2,-H-PR-0.5]) rotate([90,0,0]) cylinder(h=PH, r=PR, center=true, $fn=8);
+    }
 }
 module fan() {
     for (i = [0:1:3]) {
@@ -58,10 +64,10 @@ ZB  = TV(XB) + FUSE;
 ZC  = TV(0)  + FUSE;
 ARCH_MID = (ZC + Z0) / 2 - 4.5;
 BOSS_XI  = [ for (i = [1 : 2 : 1]) i * L * cos(ANG) - BOSS_INSET ];
-BOSS_XE  = XE - BOSS_END_INSET-1;
+BOSS_XE  = XE - BOSS_END_INSET-2;
 BOSSES   = concat(
                [ for (x = BOSS_XI) [ x, ARCH_MID - TA * x ] ],
-               [ [ BOSS_XE, ARCH_MID - TA * BOSS_XE - 10 ] ]
+               [ [ BOSS_XE, ARCH_MID - TA * BOSS_XE - 10+3 ] ]
            );
                
 profile_full = [
@@ -163,7 +169,7 @@ module lower_print() { translate([0, 0, W/2]) rotate([ 90, 0, 0]) lower_part(); 
 module upper_print() { translate([0, 0, W/2]) rotate([-90, 0, 0]) upper_part(); }
 
 
-PART = 1;
+PART = 5;
 if      (PART == 0) lower_print();
 else if (PART == 1) upper_print();
 else if (PART == 2) upper_part();    
