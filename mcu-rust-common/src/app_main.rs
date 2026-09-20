@@ -8,12 +8,12 @@
 #![deny(clippy::large_stack_frames)]
 
 use core::cell::RefCell;
-use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
 
 use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_net::{dns::DnsQueryType, tcp::TcpSocket, DhcpConfig, Runner, Stack, StackResources};
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 use esp_hal::{
     clock::CpuClock,
     interrupt::software::SoftwareInterruptControl,
@@ -29,7 +29,10 @@ use heapless::String;
 use kitt_eye_common::{
     config::RuntimeConfig,
     mqtt::{self, MqttClient},
-    patterns::{LedEngine, ANIM_SPEED_MS, LED_COUNT},
+    patterns::{
+        calculate_idle_brightness, LedEngine, ANIM_SPEED_MS, IDLE_FADE_OUT_DURATION_MS,
+        IDLE_OFF_TIMEOUT_MS, LED_COUNT,
+    },
     AgentState, MotionTheme,
 };
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
@@ -57,6 +60,9 @@ static ACTIVE_STATE: AtomicU8 = AtomicU8::new(AgentState::Idle as u8);
 
 /// Manual override active flag: true = ignore MQTT updates and show manually set state indefinitely.
 static MANUAL_OVERRIDE: AtomicBool = AtomicBool::new(false);
+
+/// Incremented on explicit state changes to wake up from idle timeout or restart timer.
+static STATE_UPDATE_SEQ: AtomicU32 = AtomicU32::new(0);
 
 /// Active motion theme: 0 = Classic, 1 = Colorful.
 static ACTIVE_THEME: AtomicU8 = AtomicU8::new(0);
@@ -188,6 +194,8 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
             let mut out = String::<512>::new();
             MANUAL_OVERRIDE.store(true, Ordering::Relaxed);
             ACTIVE_STATE.store(new_state as u8, Ordering::Relaxed);
+            let seq = STATE_UPDATE_SEQ.load(Ordering::Relaxed);
+            STATE_UPDATE_SEQ.store(seq.wrapping_add(1), Ordering::Relaxed);
             let _ = write!(
                 out,
                 "OK: state set to '{}' (manual override ON)\r\n",
@@ -197,6 +205,8 @@ async fn process_cli_command(line: &str) -> (CliOutput, bool) {
         }
         Ok(CliCommand::StateAuto) => {
             MANUAL_OVERRIDE.store(false, Ordering::Relaxed);
+            let seq = STATE_UPDATE_SEQ.load(Ordering::Relaxed);
+            STATE_UPDATE_SEQ.store(seq.wrapping_add(1), Ordering::Relaxed);
             (
                 CliOutput::Static("OK: manual override OFF (listening to MQTT)\r\n"),
                 false,
@@ -638,6 +648,10 @@ async fn main(spawner: Spawner) -> ! {
     // LED animation loop (blocking SPI inside critical section).
     // Rainbow bounce until Wi-Fi associates; then agent-state patterns.
     let mut wifi_was_up = false;
+    let mut last_state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
+    let mut last_seq = STATE_UPDATE_SEQ.load(Ordering::Relaxed);
+    let mut idle_start: Option<Instant> = None;
+
     loop {
         let wifi_up = WIFI_CONNECTED.load(Ordering::Relaxed);
         let manual_override = MANUAL_OVERRIDE.load(Ordering::Relaxed);
@@ -660,20 +674,63 @@ async fn main(spawner: Spawner) -> ! {
                 current_theme.as_str()
             );
             engine.sync_state(state);
+            last_state = state;
+            last_seq = STATE_UPDATE_SEQ.load(Ordering::Relaxed);
+            if state == AgentState::Idle {
+                idle_start = Some(Instant::now());
+            } else {
+                idle_start = None;
+            }
         } else if !show_state && wifi_was_up {
             engine.begin_wifi_wait();
+            idle_start = None;
         }
         wifi_was_up = show_state;
 
         let frame = if show_state {
             let state = AgentState::from_u8(ACTIVE_STATE.load(Ordering::Relaxed));
+            let current_seq = STATE_UPDATE_SEQ.load(Ordering::Relaxed);
+
+            if state != last_state || current_seq != last_seq {
+                last_state = state;
+                last_seq = current_seq;
+                if state == AgentState::Idle {
+                    idle_start = Some(Instant::now());
+                } else {
+                    idle_start = None;
+                }
+            } else if state == AgentState::Idle && idle_start.is_none() {
+                idle_start = Some(Instant::now());
+            }
+
             engine.set_state(state);
             *engine.step()
         } else {
             *engine.step_wifi_wait()
         };
+
+        let current_brightness = if show_state && last_state == AgentState::Idle {
+            if let Some(start) = idle_start {
+                let elapsed_ms = Instant::now().duration_since(start).as_millis();
+                calculate_idle_brightness(
+                    elapsed_ms,
+                    IDLE_OFF_TIMEOUT_MS,
+                    IDLE_FADE_OUT_DURATION_MS,
+                    BRIGHTNESS,
+                )
+            } else {
+                BRIGHTNESS
+            }
+        } else {
+            BRIGHTNESS
+        };
+
         critical_section::with(|_| {
-            let _ = strip.write(brightness(frame.into_iter(), BRIGHTNESS));
+            if current_brightness == 0 {
+                let _ = strip.write([RGB8::new(0, 0, 0); LED_COUNT]);
+            } else {
+                let _ = strip.write(brightness(frame.into_iter(), current_brightness));
+            }
         });
         let delay_ms = if show_state {
             engine.anim_delay_ms()
@@ -772,18 +829,23 @@ async fn mqtt_task(stack: Stack<'static>) {
                         .unwrap_or(0);
                     if let Some(state) = AgentState::from_mqtt(&bytes[..end]) {
                         if !MANUAL_OVERRIDE.load(Ordering::Relaxed) {
-                            ACTIVE_STATE.store(state as u8, Ordering::Relaxed);
-                            let theme_val = ACTIVE_THEME.load(Ordering::Relaxed);
-                            let theme = if theme_val == 1 {
-                                MotionTheme::Colorful
-                            } else {
-                                MotionTheme::Classic
-                            };
-                            println!(
-                                "active_state={} (theme: {})",
-                                state.as_str(),
-                                theme.as_str()
-                            );
+                            let prev = ACTIVE_STATE.load(Ordering::Relaxed);
+                            if prev != state as u8 {
+                                ACTIVE_STATE.store(state as u8, Ordering::Relaxed);
+                                let seq = STATE_UPDATE_SEQ.load(Ordering::Relaxed);
+                                STATE_UPDATE_SEQ.store(seq.wrapping_add(1), Ordering::Relaxed);
+                                let theme_val = ACTIVE_THEME.load(Ordering::Relaxed);
+                                let theme = if theme_val == 1 {
+                                    MotionTheme::Colorful
+                                } else {
+                                    MotionTheme::Classic
+                                };
+                                println!(
+                                    "active_state={} (theme: {})",
+                                    state.as_str(),
+                                    theme.as_str()
+                                );
+                            }
                         } else {
                             println!("active_state ignored (manual override active)");
                         }

@@ -26,6 +26,31 @@ pub const SLOW_SCANNER_SPEED_MS: u32 = 160;
 /// Tick for executing_tool fast K.I.T.T. scanner.
 pub const FAST_SCANNER_SPEED_MS: u32 = 40;
 
+/// Timeout in milliseconds after which the LED strip turns off if in idle state (10 minutes).
+pub const IDLE_OFF_TIMEOUT_MS: u64 = 10 * 60 * 1000;
+
+/// Duration in milliseconds of the smooth fade-out when turning off (3 seconds).
+pub const IDLE_FADE_OUT_DURATION_MS: u64 = 3000;
+
+/// Calculate LED strip brightness during idle state, smoothly fading to 0 after timeout.
+pub fn calculate_idle_brightness(
+    elapsed_ms: u64,
+    timeout_ms: u64,
+    fade_duration_ms: u64,
+    max_brightness: u8,
+) -> u8 {
+    if elapsed_ms >= timeout_ms + fade_duration_ms {
+        0
+    } else if elapsed_ms >= timeout_ms {
+        let fade_elapsed = elapsed_ms - timeout_ms;
+        let fade_remaining = fade_duration_ms.saturating_sub(fade_elapsed);
+        let b = (max_brightness as u64 * fade_remaining) / fade_duration_ms.max(1);
+        b as u8
+    } else {
+        max_brightness
+    }
+}
+
 /// Pattern identifiers (classic theme maps one state → one pattern).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PatternId {
@@ -457,5 +482,36 @@ mod tests {
                 assert_eq!(normal_frame[i], rev_frame[LED_COUNT - 1 - i]);
             }
         }
+    }
+
+    #[test]
+    fn test_calculate_idle_brightness() {
+        let max_b = 64u8;
+        let timeout = IDLE_OFF_TIMEOUT_MS; // 600,000 ms
+        let fade = IDLE_FADE_OUT_DURATION_MS; // 3,000 ms
+
+        // Before timeout: full brightness
+        assert_eq!(calculate_idle_brightness(0, timeout, fade, max_b), max_b);
+        assert_eq!(calculate_idle_brightness(100_000, timeout, fade, max_b), max_b);
+        assert_eq!(calculate_idle_brightness(timeout - 1, timeout, fade, max_b), max_b);
+
+        // At exact timeout: starts fade (still max brightness at tick 0 of fade)
+        assert_eq!(calculate_idle_brightness(timeout, timeout, fade, max_b), max_b);
+
+        // Halfway through fade: approximately half brightness
+        let half_fade = timeout + fade / 2;
+        let b_half = calculate_idle_brightness(half_fade, timeout, fade, max_b);
+        assert_eq!(b_half, 32);
+
+        // Near the end of fade: dim brightness
+        let near_end = timeout + fade - 50;
+        let b_near_end = calculate_idle_brightness(near_end, timeout, fade, max_b);
+        assert!(b_near_end <= 2);
+
+        // At timeout + fade: completely 0
+        assert_eq!(calculate_idle_brightness(timeout + fade, timeout, fade, max_b), 0);
+
+        // Well past timeout: completely 0
+        assert_eq!(calculate_idle_brightness(timeout + fade + 10_000, timeout, fade, max_b), 0);
     }
 }
