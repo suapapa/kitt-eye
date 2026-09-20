@@ -202,14 +202,14 @@ make uninstall-hooks    # Cleanly remove kitt-eye hooks while preserving other u
   - Firmware configuration is statically injected at compile time via `.env` -> `build.rs` -> `env!()` macros (in `src/config.rs`).
 - **Motion Themes (`src/theme.rs`)**:
   - `classic`: All patterns use classic Knight Rider red (`RGB8(255, 0, 0)`). States are distinguished solely by motion pattern.
-  - `colorful`: States are mapped to distinct, vivid colors and expressive motions:
+  - `colorful`: States are mapped to distinct, vivid colors with ITU-R BT.601 perceptual luminance normalization calibrated to Classic Red (`Y = 76`):
     - `idle` → Classic Red (`RGB8(255, 0, 0)`) Slow K.I.T.T. Scanner
-    - `thinking` → Mystic Purple (`RGB8(170, 0, 255)`) Center-Out
-    - `generating` → Mint Emerald (`RGB8(0, 240, 120)`) Fill-Sweep
-    - `executing_tool` → Vivid Amber (`RGB8(255, 140, 0)`) **Fast K.I.T.T. Scanner**
-    - `waiting_input` → Warning Yellow (`RGB8(255, 215, 0)`) Blink
-    - `done` → Spring Lime (`RGB8(0, 255, 50)`) Flash → Solid
-    - `error` → Crimson Red (`RGB8(255, 20, 20)`) Comet
+    - `thinking` → Electric Violet (`RGB8(159, 0, 251)`) Center-Out
+    - `generating` → Neo Mint Emerald (`RGB8(0, 118, 55)`) Fill-Sweep
+    - `executing_tool` → Vivid Amber (`RGB8(123, 66, 0)`) **Fast K.I.T.T. Scanner**
+    - `waiting_input` → Warning Yellow (`RGB8(97, 79, 0)`) Blink
+    - `done` → Spring Lime (`RGB8(0, 125, 20)`) Flash → Solid
+    - `error` → Crimson Red (`RGB8(215, 16, 16)`) Comet
 - **Embedded Safety**:
   - Never use `mem::forget` on `esp-hal` peripheral or buffer types.
   - Keep stack frames bounded; large buffers must use `StaticCell` or static arrays.

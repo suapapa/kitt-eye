@@ -342,7 +342,7 @@ impl LedEngine {
 }
 
 /// 8-bit HSV → RGB (full sat/value yields a classic rainbow wheel).
-fn hsv_to_rgb(h: u8, s: u8, v: u8) -> RGB8 {
+pub const fn hsv_to_rgb(h: u8, s: u8, v: u8) -> RGB8 {
     if s == 0 {
         return RGB8::new(v, v, v);
     }
@@ -365,12 +365,12 @@ fn hsv_to_rgb(h: u8, s: u8, v: u8) -> RGB8 {
 }
 
 #[inline]
-fn scale8(value: u8, scale: u8) -> u8 {
-    ((u16::from(value) * u16::from(scale)) / 255) as u8
+pub const fn scale8(value: u8, scale: u8) -> u8 {
+    ((value as u16 * scale as u16) / 255) as u8
 }
 
 #[inline]
-fn scale_color(c: RGB8, scale: u8) -> RGB8 {
+pub const fn scale_color(c: RGB8, scale: u8) -> RGB8 {
     RGB8::new(scale8(c.r, scale), scale8(c.g, scale), scale8(c.b, scale))
 }
 

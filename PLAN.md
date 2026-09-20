@@ -160,14 +160,14 @@ kitt-eye/
      - `waiting_input`: Blink (동기 점멸)
      - `done`: Flash → Solid (플래시 후 점등)
      - `error`: Comet (한 방향 혜성)
-   - **`colorful` (상태별 생생한 컬러 & 모션)**:
+   - **`colorful` (상태별 생생한 컬러 & 모션, BT.601 지각 휘도 평준화 적용)**:
      - `idle`: Classic Red (`RGB8(255, 0, 0)`) Slow K.I.T.T. Scanner
-     - `thinking`: Mystic Purple (`RGB8(170, 0, 255)`) Center-Out
-     - `generating`: Mint Emerald (`RGB8(0, 240, 120)`) Fill Sweep
-     - `executing_tool`: Vivid Amber (`RGB8(255, 140, 0)`) **Fast K.I.T.T. Scanner**
-     - `waiting_input`: Warning Yellow (`RGB8(255, 215, 0)`) Blink
-     - `done`: Spring Lime (`RGB8(0, 255, 50)`) Flash → Solid
-     - `error`: Crimson Red (`RGB8(255, 20, 20)`) Comet
+     - `thinking`: Electric Violet (`RGB8(159, 0, 251)`) Center-Out
+     - `generating`: Neo Mint Emerald (`RGB8(0, 118, 55)`) Fill Sweep
+     - `executing_tool`: Vivid Amber (`RGB8(123, 66, 0)`) **Fast K.I.T.T. Scanner**
+     - `waiting_input`: Warning Yellow (`RGB8(97, 79, 0)`) Blink
+     - `done`: Spring Lime (`RGB8(0, 125, 20)`) Flash → Solid
+     - `error`: Crimson Red (`RGB8(215, 16, 16)`) Comet
 
 ---
 
