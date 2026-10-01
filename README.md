@@ -1,4 +1,8 @@
-# kitt-eye 🚗💨
+# kitt-eye - K.I.T.T. Scanner That Actually Works!
+
+<p align="center">
+  <img src="docs/kitt-eye_cropped.gif" alt="kitt-eye" width="600">
+</p>
 
 [English](README.md) | [한국어](README_ko.md)
 
@@ -10,7 +14,7 @@ Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`
 
 ---
 
-## 🌟 Highlights
+## Highlights
 
 - **Multi-Agent CLI Support**: Native lifecycle hooks for Claude Code, OpenAI Codex CLI, Cursor CLI, Antigravity CLI (`agy`), and Hermes Agent.
 - **2 Expressive Motion Themes**:
@@ -29,7 +33,7 @@ Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`
 
 ---
 
-## 🚦 State Hierarchy & LED Motion Patterns
+## State Hierarchy & LED Motion Patterns
 
 When multiple agents or terminal sessions run concurrently, **kitt-eye** evaluates their states against a strict priority hierarchy:
 ```text
@@ -48,7 +52,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```text
 [ AI CLI Tools ]
@@ -69,15 +73,15 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
          ▼
 [ HomeLab MQTT Broker (Home Assistant Mosquitto) ]
          │
-         ├──────────────────────────────────────┐
-         ▼                                      ▼
-[ ESP32-S2 Firmware (`mcu-rust`) ]     [ Home Assistant ]
- └── WS2812B NeoPixel 8-LED Bar             └── Sensor Dashboard (Auto-Discovery)
+         │
+         ▼
+[ ESP32-S2 Firmware (`mcu-rust`) ]
+ └── WS2812B NeoPixel 8-LED Bar
 ```
 
 ---
 
-## 🔌 Hardware Setup & Wiring
+## Hardware Setup & Wiring
 
 > For detailed pinout diagrams and troubleshooting, see the [Hardware Wiring Guide](docs/hardware_wiring.md).
 
@@ -98,7 +102,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Prerequisites
 
@@ -335,7 +339,7 @@ kitt-eye>
 
 ---
 
-## 📡 MQTT Topic Reference
+## MQTT Topic Reference
 
 All state topics are published with **QoS 1 and Retain flag** so late-joining devices (like the ESP32) receive the current state immediately.
 
@@ -350,7 +354,7 @@ All state topics are published with **QoS 1 and Retain flag** so late-joining de
 
 ---
 
-## 🛠️ Makefile Commands
+## Makefile Commands
 
 ```bash
 make help                       # Display all available targets
@@ -376,7 +380,7 @@ make clean                      # Clean build artifacts
 
 ---
 
-## 📖 Further Documentation
+## Further Documentation
 
 - [Korean Documentation (한국어)](README_ko.md)
 - [PLAN.md](PLAN.md): Complete architecture specification & hook protocol details
@@ -386,6 +390,6 @@ make clean                      # Clean build artifacts
 
 ---
 
-## 📄 License
+## License
 
 [MIT License](./LICENSE) © 2026 Homin Lee <i@homin.dev>

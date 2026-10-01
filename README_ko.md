@@ -1,4 +1,8 @@
-# kitt-eye 🚗💨
+# kitt-eye - 실제로 작동하는 K.I.T.T. 스캐너!
+
+<p align="center">
+  <img src="docs/kitt-eye_cropped.gif" alt="kitt-eye" width="600">
+</p>
 
 [English](README.md) | [한국어](README_ko.md)
 
@@ -10,7 +14,7 @@
 
 ---
 
-## 🌟 주요 특징
+## 주요 특징
 
 - **다양한 AI CLI 지원**: Claude Code, OpenAI Codex CLI, Cursor CLI, Antigravity CLI(`agy`), Hermes Agent 공식 훅 지원.
 - **2가지 LED 모션 테마**:
@@ -31,7 +35,7 @@
 
 ---
 
-## 🚦 상태 스펙 & LED 모션 테마
+## 상태 스펙 & LED 모션 테마
 
 총 7가지 상태를 표현하며, 여러 세션이 동작 중일 때는 다음 우선순위에 따라 가장 중요한 상태가 LED에 표시됩니다:
 ```text
@@ -52,7 +56,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ---
 
-## 🏗️ 시스템 아키텍처
+## 시스템 아키텍처
 
 ```text
 [ AI CLI Tools ]
@@ -73,15 +77,15 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
          ▼
 [ HomeLab MQTT Broker (Home Assistant Mosquitto) ]
          │
-         ├──────────────────────────────────────┐
-         ▼                                      ▼
-[ ESP32-S2 LED 바 (Rust / Embassy) ]   [ Home Assistant ]
- └── WS2812B NeoPixel 8구 K.I.T.T. 스캐너    └── 센서 대시보드 (자동 Discovery)
+         │
+         ▼
+[ ESP32-S2 LED 바 (Rust / Embassy) ]
+ └── WS2812B NeoPixel 8구 K.I.T.T. 스캐너
 ```
 
 ---
 
-## 🔌 하드웨어 구성 & 배선
+## 하드웨어 구성 & 배선
 
 > 보드별 상세 핀아웃 다이어그램과 트러블슈팅은 [하드웨어 연결 가이드](docs/hardware_wiring.md)를 참고하세요.
 
@@ -102,7 +106,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 ---
 
-## 🚀 빠른 시작
+## 빠른 시작
 
 ### 1. 요구 사항
 
@@ -339,7 +343,7 @@ kitt-eye>
 
 ---
 
-## 📡 MQTT 토픽 규격
+## MQTT 토픽 규격
 
 모든 상태 토픽은 **QoS 1, Retain** 플래그로 발행되어 네트워크가 재연결되거나 MCU가 늦게 켜져도 즉시 마지막 유효 상태를 유지합니다.
 
@@ -354,7 +358,7 @@ kitt-eye>
 
 ---
 
-## 🛠️ 주요 Makefile 명령어
+## 주요 Makefile 명령어
 
 ```bash
 make help                       # 전체 타깃 도움말 출력
@@ -380,7 +384,7 @@ make clean                      # 빌드 산출물 정리
 
 ---
 
-## 📖 추가 문서
+## 추가 문서
 
 - [English Documentation](README.md)
 - [PLAN.md](PLAN.md): 아키텍처 및 통신 프로토콜 상세 규격서
@@ -390,6 +394,6 @@ make clean                      # 빌드 산출물 정리
 
 ---
 
-## 📄 라이선스
+## 라이선스
 
 [MIT License](./LICENSE) © 2026 Homin Lee <i@homin.dev>
