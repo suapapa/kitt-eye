@@ -12,7 +12,7 @@
 
 **kitt-eye**는 에이전트의 라이프사이클 훅(Hook)을 감지하여 방 건너편에서도 데스크 위의 LED 바 하나로 현재 상태를 한눈에 파악할 수 있게 해줍니다.
 
----
+
 
 ## 주요 특징
 
@@ -33,7 +33,7 @@
   - ESP32-S2 및 ESP32-C3 베어메탈 Rust (`esp-hal` + `embassy`), WS2812B NeoPixel 8구 LED 바 제어.
   - 온칩 USB 시리얼 CLI(USB-OTG CDC-ACM / USB-Serial-JTAG)를 통한 실시간 Wi-Fi/MQTT 설정, 테마 전환, 직접 LED 상태 제어 지원.
 
----
+
 
 ## 상태 스펙 & LED 모션 테마
 
@@ -54,7 +54,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 > `done`과 `error`는 설정된 TTL(기본: 15초, 60초)이 지나면 자동으로 `idle`로 복귀합니다.
 
----
+
 
 ## 시스템 아키텍처
 
@@ -83,7 +83,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
  └── WS2812B NeoPixel 8구 K.I.T.T. 스캐너
 ```
 
----
+> Mermaid 다이어그램 (데이터 흐름, 상태 우선순위, MQTT 토픽, MCU 구조): [docs/architecture.md](docs/architecture.md).
 
 ## 하드웨어 구성 & 배선
 
@@ -104,7 +104,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 *(참고: GPIO4는 내부 SPI Master 클록 초기화용으로 예약되어 있으나 배선은 필요하지 않습니다.)*
 
----
+
 
 ## 빠른 시작
 
@@ -119,7 +119,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
   - `espup install` (또는 `esp` 툴체인)
   - `cargo install espflash`
 
----
+
 
 ### 2. 브로커 없이 로컬에서 바로 체험하기 (Dry-Run 모드)
 
@@ -142,7 +142,7 @@ make run-pub
 ```
 데몬이 실행 중인 터미널에 실시간으로 집계된 상태가 JSON으로 출력되는 것을 확인할 수 있습니다.
 
----
+
 
 ### 3. MQTT 브로커 연결 (Home Assistant 등)
 
@@ -172,7 +172,7 @@ make run-sub
 # mosquitto_sub -h homeassistant.local -v -t 'kitt-eye/#'
 ```
 
----
+
 
 ### 3a. 백그라운드 사용자 서비스로 상시 실행 (Linux systemd 및 macOS launchd)
 
@@ -212,7 +212,7 @@ make restart-service
 make uninstall-service
 ```
 
----
+
 
 ### 3b. 하드웨어 및 상태 데모 (AI Agent 훅 연동 없이 테스트)
 
@@ -233,7 +233,7 @@ make demo-mqtt                           # 7개 전체 상태 자동 순환 데�
 
 자세한 옵션과 사용법은 [`scripts/README.md`](scripts/README.md), [`scripts/demo-serial/README.md`](scripts/demo-serial/README.md), 및 [`scripts/demo-mqtt/README.md`](scripts/demo-mqtt/README.md)를 참고하세요.
 
----
+
 
 ### 4. CLI 훅 설치
 
@@ -255,7 +255,7 @@ make install-hooks
 
 > 훅 제거 시: `make uninstall-hooks` (다른 개인 훅은 안전하게 보존하고 kitt-eye 훅만 깔끔하게 제거합니다).
 
----
+
 
 ### 5. MCU 펌웨어 빌드 & 플래시 (ESP32-C3 / ESP32-S2)
 
@@ -283,7 +283,7 @@ make flash-mcu-s2   # ESP32-S2 보드 플래시 (--no-stub 자동 적용)
 
 이제 AI 에이전트에게 코딩을 시키면 데스크 위의 LED 바가 실시간으로 화려하게 반응합니다!
 
----
+
 
 ### 6. USB 시리얼 CLI 설정 및 직접 LED 제어
 
@@ -341,7 +341,7 @@ kitt-eye>
 > **직접 LED 애니메이션 테스트**:
 > `state <NAME>` (`idle`, `thinking`, `generating`, `executing_tool`, `waiting_input`, `done`, `error`) 명령으로 AI 에이전트 작업 없이도 7가지 모션 애니메이션을 즉시 확인할 수 있습니다. 테스트가 끝나면 `state auto`를 입력하여 정상 모드로 복귀하세요.
 
----
+
 
 ## MQTT 토픽 규격
 
@@ -356,7 +356,7 @@ kitt-eye>
 | `{prefix}/system/status` | `online` / `offline` | 데몬 생존 상태 (LWT 지원) |
 | `homeassistant/sensor/kitt_eye_*/config` | `{...}` | Home Assistant 자동 센서 디스커버리 |
 
----
+
 
 ## 주요 Makefile 명령어
 
@@ -382,17 +382,18 @@ make test                       # 전체 테스트 (Go 단위 테스트 + C3/S2 
 make clean                      # 빌드 산출물 정리
 ```
 
----
+
 
 ## 추가 문서
 
 - [English Documentation](README.md)
 - [PLAN.md](PLAN.md): 아키텍처 및 통신 프로토콜 상세 규격서
 - [AGENTS.md](AGENTS.md): AI 코딩 어시스턴트를 위한 개발 가이드 및 제약 사항
+- [docs/architecture.md](docs/architecture.md): 아키텍처 다이어그램 (Mermaid)
 - [docs/hardware_wiring.md](docs/hardware_wiring.md): 하드웨어 배선도 및 트러블슈팅 가이드
 - [docs/esp32s2_usb_serial_plan.md](docs/esp32s2_usb_serial_plan.md): USB 시리얼 CLI 설계 및 아키텍처
 
----
+
 
 ## 라이선스
 

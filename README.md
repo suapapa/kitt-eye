@@ -12,7 +12,7 @@ Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`
 
 **kitt-eye** bridges this gap by turning an ESP32-S2 and an 8-LED NeoPixel strip into an iconic K.I.T.T. scanner on your desk, giving you peripheral awareness of your AI agents from across the room.
 
----
+
 
 ## Highlights
 
@@ -31,7 +31,7 @@ Running AI coding assistants (`claude`, `codex`, `cursor-cli`, `antigravity-cli`
   - Bare-metal Rust (`no_std`, `esp-hal` + `embassy`) for ESP32-S2 and ESP32-C3 controlling WS2812B NeoPixel LEDs.
   - Interactive on-chip USB Serial CLI (USB-OTG CDC-ACM / USB-Serial-JTAG) for runtime Wi-Fi & MQTT configuration, theme switching, and direct manual state control.
 
----
+
 
 ## State Hierarchy & LED Motion Patterns
 
@@ -50,7 +50,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 | `done` | Task finished | Flash 3x then hold Solid (auto-reverts to idle) | 🟢 Spring Lime Flash → Solid |
 | `error` | Tool failure or agent error | Comet (trailing tail, auto-reverts to idle) | 🔴 Crimson Red Comet |
 
----
+
 
 ## Architecture
 
@@ -79,7 +79,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
  └── WS2812B NeoPixel 8-LED Bar
 ```
 
----
+> Mermaid diagrams (data flow, state priority, MQTT topics, MCU layout): [docs/architecture.md](docs/architecture.md).
 
 ## Hardware Setup & Wiring
 
@@ -100,7 +100,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
 
 *(Note: GPIO4 is reserved internally for SPI master clock initialization on both chips, but no physical wiring to the LED bar is needed.)*
 
----
+
 
 ## Quick Start
 
@@ -115,7 +115,7 @@ error > waiting_input > executing_tool > generating > thinking > done > idle
   - `espup install` (or `esp` toolchain)
   - `cargo install espflash`
 
----
+
 
 ### 2. Test Locally Without Hardware (Dry-Run Mode)
 
@@ -138,7 +138,7 @@ In a second terminal, inject simulated agent events:
 ```
 Watch the publisher daemon instantly compute and output the aggregated status!
 
----
+
 
 ### 3. Connect to MQTT Broker (Home Assistant)
 
@@ -168,7 +168,7 @@ make run-sub
 # mosquitto_sub -h homeassistant.local -v -t 'kitt-eye/#'
 ```
 
----
+
 
 ### 3a. Run as a Background User Service (Linux systemd or macOS launchd)
 
@@ -208,7 +208,7 @@ To stop and remove the service:
 make uninstall-service
 ```
 
----
+
 
 ### 3b. Hardware & State Demo (Without AI Agent Hooks)
 
@@ -229,7 +229,7 @@ make demo-mqtt                           # Automatic cycling across all 7 states
 
 See the [`scripts/README.md`](scripts/README.md), [`scripts/demo-serial/README.md`](scripts/demo-serial/README.md), and [`scripts/demo-mqtt/README.md`](scripts/demo-mqtt/README.md) for full options.
 
----
+
 
 ### 4. Install CLI Lifecycle Hooks
 
@@ -251,7 +251,7 @@ make install-hooks
 
 > To remove hooks: `make uninstall-hooks` (safely removes kitt-eye entries while preserving other custom user hooks).
 
----
+
 
 ### 5. Flash MCU Firmware (ESP32-C3 / ESP32-S2)
 
@@ -279,7 +279,7 @@ make flash-mcu-s2   # Flash connected ESP32-S2 board (with --no-stub)
 
 Now start coding with your favorite AI agent and watch your desk LED bar pulse and scan in real time!
 
----
+
 
 ### 6. USB Serial Configuration & Manual LED Control
 
@@ -337,7 +337,7 @@ kitt-eye>
 > **Testing LED Animations Directly**:
 > Run `state <NAME>` (`idle`, `thinking`, `generating`, `executing_tool`, `waiting_input`, `done`, `error`) to display any animation immediately without waiting for AI agent actions. Enter `state auto` to return to live MQTT monitoring.
 
----
+
 
 ## MQTT Topic Reference
 
@@ -352,7 +352,7 @@ All state topics are published with **QoS 1 and Retain flag** so late-joining de
 | `{prefix}/system/status` | `online` / `offline` | Daemon availability & LWT message |
 | `homeassistant/sensor/kitt_eye_*/config` | `{...}` | Home Assistant MQTT Discovery configuration |
 
----
+
 
 ## Makefile Commands
 
@@ -378,17 +378,18 @@ make test                       # Run full test suite (Go unit tests + both Rust
 make clean                      # Clean build artifacts
 ```
 
----
+
 
 ## Further Documentation
 
 - [Korean Documentation (한국어)](README_ko.md)
 - [PLAN.md](PLAN.md): Complete architecture specification & hook protocol details
 - [AGENTS.md](AGENTS.md): Developer & AI agent technical constraints and guidelines
+- [docs/architecture.md](docs/architecture.md): Visual architecture diagrams (Mermaid)
 - [docs/hardware_wiring.md](docs/hardware_wiring.md): Hardware wiring diagram & troubleshooting
 - [docs/esp32s2_usb_serial_plan.md](docs/esp32s2_usb_serial_plan.md): USB Serial CLI design & architecture
 
----
+
 
 ## License
 
