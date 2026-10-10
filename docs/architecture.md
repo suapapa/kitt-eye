@@ -3,6 +3,8 @@
 ASCII 아키텍처 설명을 Mermaid 다이어그램으로 시각화한 문서입니다.  
 상세 프로토콜·상태 규칙은 [PLAN.md](../PLAN.md), 개발 제약은 [AGENTS.md](../AGENTS.md)를 참고하세요.
 
+영문 · 밝은 테마 이미지(PNG/SVG)는 [`architecture-diagrams/`](architecture-diagrams/)에 있습니다 (영상·슬라이드용).
+
 
 
 ## 1. System Overview
@@ -107,8 +109,8 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    PUB["Go Publisher"] --> ACT["kitt-eye/active_state<br/>대표 상태 문자열"]
-    PUB --> AGT["kitt-eye/active_agent<br/>대표 에이전트명"]
+    PUB["Go Publisher"] --> ACT["kitt-eye/active_state<br/>representative state string"]
+    PUB --> AGT["kitt-eye/active_agent<br/>representative agent name"]
     PUB --> AST["kitt-eye/agents/{agent}/state"]
     PUB --> SES["kitt-eye/agents/{agent}/sessions<br/>AgentSnapshot JSON"]
     PUB --> SYS["kitt-eye/system/status<br/>online / offline · LWT"]
