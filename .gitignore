@@ -2,6 +2,9 @@
 .agents/
 skills-lock.json
 
+# Archify local working copies
+.archify/
+
 # OS
 .DS_Store
 Thumbs.db
