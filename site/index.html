@@ -5,9 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>kitt-eye - Desk scanner for AI coding agents</title>
   <meta name="description" content="Homelab monitoring that turns AI CLI lifecycle events into a K.I.T.T. scanner LED bar over MQTT and Home Assistant.">
+  <link rel="canonical" href="https://suapapa.github.io/kitt-eye/">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="./assets/favicon.ico" sizes="any">
+  <link rel="icon" href="./assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" sizes="180x180">
+  <meta name="theme-color" content="#0c0a0a">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="kitt-eye">
+  <meta property="og:url" content="https://suapapa.github.io/kitt-eye/">
   <meta property="og:title" content="kitt-eye">
   <meta property="og:description" content="Peripheral awareness for AI coding agents on a Knight Rider LED bar.">
-  <meta property="og:image" content="./assets/kitt-eye.gif">
+  <meta property="og:image" content="https://suapapa.github.io/kitt-eye/assets/og.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="kitt-eye desk scanner LED bar">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="kitt-eye">
+  <meta name="twitter:description" content="Peripheral awareness for AI coding agents on a Knight Rider LED bar.">
+  <meta name="twitter:image" content="https://suapapa.github.io/kitt-eye/assets/og.jpg">
   <link rel="stylesheet" href="./styles.css">
   <script src="./i18n.js" defer></script>
 </head>
@@ -58,10 +75,10 @@
       <div class="hero__content">
         <h1 class="hero__brand reveal">kitt<span>-eye</span></h1>
         <p class="hero__lead reveal reveal-d1" data-i18n="heroLead">
-          See when your AI coding agents think, run tools, or wait for you - from across the room.
+          A homelab monitor that gathers AI coding agent lifecycle events over MQTT and shows the active state on a desk LED bar.
         </p>
         <p class="hero__motif reveal reveal-d2" data-i18n="heroMotif">
-          Motivated by the iconic red scanner of K.I.T.T. from Knight Rider.
+          Deskterior modeled on the K.I.T.T. scanner from Knight Rider.
         </p>
         <div class="hero__actions reveal reveal-d3">
           <a class="btn btn--primary" href="https://github.com/suapapa/kitt-eye" target="_blank" rel="noopener noreferrer" data-i18n="ctaGithub">
@@ -166,7 +183,12 @@
 
   <footer class="site-footer">
     <div class="site-footer__inner">
-      <p data-i18n="footerCopy">kitt-eye - open source homelab agent monitor</p>
+      <div class="site-footer__meta">
+        <p data-i18n="footerCopy">kitt-eye - open source homelab agent monitor</p>
+        <p class="site-footer__credit">
+          Homin Lee &lt;<a href="mailto:i@homin.dev">i@homin.dev</a>&gt;
+        </p>
+      </div>
       <p>
         <a href="https://github.com/suapapa/kitt-eye" target="_blank" rel="noopener noreferrer">GitHub</a>
         ·

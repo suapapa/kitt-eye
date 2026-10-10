@@ -578,11 +578,26 @@ a {
   margin-inline: auto;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+.site-footer__meta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.site-footer__meta p,
+.site-footer__inner > p {
+  margin: 0;
+}
+
+.site-footer__credit {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
 }
 
 .site-footer a {

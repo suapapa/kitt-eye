@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="kitt-eye">
+  <rect width="32" height="32" fill="#0c0a0a"/>
+  <ellipse cx="16" cy="18.5" rx="10" ry="4" fill="#c41e2a" opacity="0.22"/>
+  <rect x="4" y="13" width="24" height="6" rx="3" fill="#161212" stroke="#2a2222" stroke-width="0.75"/>
+  <rect x="6.5" y="14.5" width="2" height="3" rx="0.5" fill="#5a1016"/>
+  <rect x="9.5" y="14.5" width="2" height="3" rx="0.5" fill="#8f1a22"/>
+  <rect x="12.5" y="14.5" width="2" height="3" rx="0.5" fill="#e02834"/>
+  <rect x="15.5" y="14.5" width="2" height="3" rx="0.5" fill="#ff3a3a"/>
+  <rect x="18.5" y="14.5" width="2" height="3" rx="0.5" fill="#e02834"/>
+  <rect x="21.5" y="14.5" width="2" height="3" rx="0.5" fill="#8f1a22"/>
+  <rect x="24.5" y="14.5" width="2" height="3" rx="0.5" fill="#5a1016"/>
+</svg>

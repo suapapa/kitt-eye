@@ -17,9 +17,9 @@
       langLabel: "Language",
       heroAria: "Introduction",
       heroLead:
-        "See when your AI coding agents think, run tools, or wait for you - from across the room.",
+        "A homelab monitor that gathers AI coding agent lifecycle events over MQTT and shows the active state on a desk LED bar.",
       heroMotif:
-        "Motivated by the iconic red scanner of K.I.T.T. from Knight Rider.",
+        "Deskterior modeled on the K.I.T.T. scanner from Knight Rider.",
       ctaGithub: "GitHub Repo",
       ctaThingiverse: "Thingiverse",
       demoTitle: "In motion",
@@ -59,11 +59,11 @@
       footerCopy: "kitt-eye - open source homelab agent monitor",
     },
     ko: {
-      metaTitle: "kitt-eye - AI 코딩 에이전트용 데스크 스캐너",
+      metaTitle: "kitt-eye - AI 코딩 에이전트용 데스크테리어",
       metaDescription:
-        "AI CLI 생명주기 이벤트를 MQTT와 Home Assistant로 모아 K.I.T.T. 스캐너 LED 바에 띄우는 홈랩 모니터링.",
+        "AI CLI 생명주기 이벤트를 MQTT와 Home Assistant로 모아 K.I.T.T. 스캐너 LED 바에 띄우는 홈랩 모니터.",
       ogDescription:
-        "Knight Rider 스타일 LED 바로 AI 코딩 에이전트 상태를 한눈에.",
+        "Knight Rider K.I.T.T. 스캐너를 딴 데스크테리어. AI 코딩 에이전트 상태를 LED로 봅니다.",
       navPrimary: "주 메뉴",
       navDemo: "데모",
       navArchitecture: "아키텍처",
@@ -72,29 +72,29 @@
       langLabel: "언어",
       heroAria: "소개",
       heroLead:
-        "AI 코딩 에이전트가 생각 중인지, 도구를 돌리는지, 입력을 기다리는지. 방 건너편에서도 보입니다.",
+        "AI 코딩 에이전트 생명주기 이벤트를 MQTT로 모아서, 책상 LED 바로 현재 상태를 보여 줍니다.",
       heroMotif:
-        "Knight Rider의 K.I.T.T. 빨간 스캐너에서 따왔습니다.",
+        "Knight Rider의 K.I.T.T. 스캐너를 딴 데스크테리어입니다.",
       ctaGithub: "GitHub 저장소",
       ctaThingiverse: "Thingiverse",
       demoTitle: "동작 모습",
       demoBody:
-        "훅이 Claude, Codex, Cursor, Antigravity, Hermes를 지켜봅니다. Go 데몬이 MQTT로 상태를 모아 ESP32 NeoPixel 바에 올립니다.",
+        "훅이 Claude, Codex, Cursor, Antigravity, Hermes를 봅니다. Go 데몬이 MQTT로 상태를 모아 ESP32 NeoPixel 바에 올립니다.",
       videoTitle: "kitt-eye 데모 영상",
       archTitle: "연결 구조",
       archBody:
-        "CLI 생명주기 훅, Unix 소켓, MQTT를 지나 WS2812B 스캐너까지 이어집니다. 자세한 그림은 인터랙티브 다이어그램에서 보세요.",
+        "CLI 생명주기 훅에서 Unix 소켓, MQTT를 거쳐 WS2812B 스캐너로 이어집니다. 자세한 그림은 인터랙티브 다이어그램을 보세요.",
       archLinkAria: "인터랙티브 kitt-eye 아키텍처 다이어그램 열기",
       archImgAlt:
         "kitt-eye 아키텍처 다이어그램: AI CLI 훅, Go 퍼블리셔, MQTT, ESP32 LED 바",
       archMetaStrong: "인터랙티브 아키텍처",
       archMetaSpan: "다이어그램 열기",
-      pipelineTitle: "대시보드가 아니라 책상 위",
+      pipelineTitle: "대시보드 말고 책상 위",
       pipelineBody:
         "보내고 끝나는 훅, 우선순위 집계, retained MQTT로 부팅 직후에도 상태를 바로 복구합니다.",
       stepHooksTitle: "생명주기 훅",
       stepHooksBody:
-        "다섯 AI CLI용 읽기 전용 옵저버. /tmp/kitt-eye.sock로 NDJSON을 보내고, stdout은 건드리지 않습니다.",
+        "다섯 AI CLI용 읽기 전용 옵저버. /tmp/kitt-eye.sock로 NDJSON을 보내고 stdout은 건드리지 않습니다.",
       stepPubTitle: "Go 퍼블리셔",
       stepPubBody:
         "TTL로 정리하는 다중 세션 저장소. 여러 에이전트를 하나의 active_state로 모읍니다.",
@@ -125,8 +125,10 @@
       navGithub: "GitHub",
       langLabel: "语言",
       heroAria: "介绍",
-      heroLead: "从房间另一头也能看出 AI 编程助手是在思考、跑工具，还是在等你确认。",
-      heroMotif: "灵感来自《霹雳游侠》中 K.I.T.T. 标志性的红色扫描灯。",
+      heroLead:
+        "采集 AI 编程助手生命周期事件，经 MQTT 聚合后显示在桌面 LED 灯条上的家庭实验室监控。",
+      heroMotif:
+        "以《霹雳游侠》K.I.T.T. 扫描灯为灵感的桌面装饰。",
       ctaGithub: "GitHub 仓库",
       ctaThingiverse: "Thingiverse",
       demoTitle: "动态演示",
@@ -176,9 +178,9 @@
       langLabel: "言語",
       heroAria: "紹介",
       heroLead:
-        "AIコーディングエージェントが考え中か、ツール実行中か、入力待ちか - 部屋の向こうから分かります。",
+        "AIコーディングエージェントのライフサイクルをMQTTで集約し、机上のLEDバーに表示するホームラブモニターです。",
       heroMotif:
-        "Knight RiderのK.I.T.T.正面にある赤いスキャナーをモチーフにしています。",
+        "Knight RiderのK.I.T.T.スキャナーを模したデスクインテリアです。",
       ctaGithub: "GitHubリポジトリ",
       ctaThingiverse: "Thingiverse",
       demoTitle: "動作の様子",
