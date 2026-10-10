@@ -338,7 +338,6 @@ a {
 
 .hero__motif {
   margin: 0 0 1.75rem;
-  max-width: 42ch;
   font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 400;
