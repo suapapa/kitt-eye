@@ -65,12 +65,20 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-wrap: break-word;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
+}
+
+/* Korean: wrap at eojeol (spaces), not mid-syllable; still break long Latin tokens */
+html[lang="ko"] {
+  word-break: keep-all;
+  line-break: strict;
+  overflow-wrap: anywhere;
 }
 
 body {
@@ -85,6 +93,11 @@ body {
     var(--bg);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+code {
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 img {
@@ -330,7 +343,7 @@ a {
 
 .hero__lead {
   margin: 0 0 0.65rem;
-  max-width: 34ch;
+  max-width: min(100%, 40rem);
   font-size: clamp(1.05rem, 2.2vw, 1.25rem);
   color: var(--text-muted);
   line-height: 1.45;
@@ -338,11 +351,20 @@ a {
 
 .hero__motif {
   margin: 0 0 1.75rem;
+  max-width: min(100%, 40rem);
   font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 400;
   color: #c9a0a3;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+html[lang="ko"] .hero__motif,
+html[lang="zh"] .hero__motif,
+html[lang="ja"] .hero__motif {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 .hero__actions {
@@ -415,7 +437,7 @@ a {
 
 .section__body {
   margin: 0 0 2rem;
-  max-width: 58ch;
+  max-width: min(100%, 52rem);
   color: var(--text-muted);
   font-size: 1.05rem;
 }
