@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kitt-eye - Desk scanner for AI coding agents</title>
+  <meta name="description" content="Homelab monitoring that turns AI CLI lifecycle events into a K.I.T.T. scanner LED bar over MQTT and Home Assistant.">
+  <meta property="og:title" content="kitt-eye">
+  <meta property="og:description" content="Peripheral awareness for AI coding agents on a Knight Rider LED bar.">
+  <meta property="og:image" content="./assets/kitt-eye.gif">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./i18n.js" defer></script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="./index.html">kitt<span>-eye</span></a>
+      <div class="header-tools">
+        <div class="lang-switch">
+          <label class="lang-switch__label" for="lang-select" data-i18n="langLabel">Language</label>
+          <select id="lang-select" class="lang-switch__select" aria-label="Language">
+            <option value="en">English</option>
+            <option value="ko">한국어</option>
+            <option value="zh">中文</option>
+            <option value="ja">日本語</option>
+          </select>
+          <div class="lang-switch__pills" role="group" aria-label="Language">
+            <button type="button" class="lang-switch__btn" data-lang="en" aria-pressed="false">EN</button>
+            <button type="button" class="lang-switch__btn" data-lang="ko" aria-pressed="false">KO</button>
+            <button type="button" class="lang-switch__btn" data-lang="zh" aria-pressed="false">中文</button>
+            <button type="button" class="lang-switch__btn" data-lang="ja" aria-pressed="false">JA</button>
+          </div>
+        </div>
+        <nav class="nav" data-i18n-aria="navPrimary">
+          <a href="#demo" data-i18n="navDemo">Demo</a>
+          <a href="#architecture" data-i18n="navArchitecture">Architecture</a>
+          <a href="https://www.thingiverse.com/thing:7417369" target="_blank" rel="noopener noreferrer" data-i18n="navThingiverse">Thingiverse</a>
+          <a class="nav__cta" href="https://github.com/suapapa/kitt-eye" target="_blank" rel="noopener noreferrer" data-i18n="navGithub">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" data-i18n-aria="heroAria">
+      <div class="hero__media" aria-hidden="true">
+        <img
+          src="./assets/kitt-eye.gif"
+          alt=""
+          width="800"
+          height="280"
+          fetchpriority="high"
+        >
+        <div class="hero__veil"></div>
+      </div>
+      <div class="hero__content">
+        <h1 class="hero__brand reveal">kitt<span>-eye</span></h1>
+        <p class="hero__lead reveal reveal-d1" data-i18n="heroLead">
+          See when your AI coding agents think, run tools, or wait for you - from across the room.
+        </p>
+        <p class="hero__motif reveal reveal-d2" data-i18n="heroMotif">
+          Motivated by the iconic red scanner of K.I.T.T. from Knight Rider.
+        </p>
+        <div class="hero__actions reveal reveal-d3">
+          <a class="btn btn--primary" href="https://github.com/suapapa/kitt-eye" target="_blank" rel="noopener noreferrer" data-i18n="ctaGithub">
+            GitHub Repo
+          </a>
+          <a class="btn btn--ghost" href="https://www.thingiverse.com/thing:7417369" target="_blank" rel="noopener noreferrer" data-i18n="ctaThingiverse">
+            Thingiverse
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo">
+      <h2 class="section__title" data-i18n="demoTitle">In motion</h2>
+      <p class="section__body" data-i18n="demoBody">
+        Hooks watch Claude, Codex, Cursor, Antigravity, and Hermes. A Go daemon aggregates state over MQTT onto an ESP32 NeoPixel bar.
+      </p>
+      <div class="video-wrap">
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/wyhWsYbmHZ8"
+          data-i18n-title="videoTitle"
+          title="kitt-eye demo video"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <h2 class="section__title" data-i18n="archTitle">How the pieces connect</h2>
+      <p class="section__body" data-i18n="archBody">
+        From CLI lifecycle hooks through Unix socket and MQTT to the WS2812B scanner. Open the interactive diagram for the full map.
+      </p>
+      <a class="arch-link" href="./architecture.html" data-i18n-aria="archLinkAria" aria-label="Open interactive kitt-eye architecture diagram">
+        <img
+          src="./assets/architecture.png"
+          data-i18n-alt="archImgAlt"
+          alt="kitt-eye architecture diagram: AI CLI hooks to Go publisher to MQTT to ESP32 LED bar"
+          width="1567"
+          height="1030"
+          loading="lazy"
+        >
+        <div class="arch-link__meta">
+          <strong data-i18n="archMetaStrong">Interactive architecture</strong>
+          <span data-i18n="archMetaSpan">Open diagram</span>
+        </div>
+      </a>
+    </section>
+
+    <section class="section" id="pipeline">
+      <h2 class="section__title" data-i18n="pipelineTitle">Built for the desk, not the dashboard</h2>
+      <p class="section__body" data-i18n="pipelineBody">
+        Fire-and-forget hooks, priority aggregation, and retained MQTT so the bar recovers state on boot.
+      </p>
+      <ol class="pipeline__list">
+        <li>
+          <h3 data-i18n="stepHooksTitle">Lifecycle hooks</h3>
+          <p data-i18n="stepHooksBody">Read-only observers for five AI CLIs. NDJSON over /tmp/kitt-eye.sock, silent on stdout.</p>
+        </li>
+        <li>
+          <h3 data-i18n="stepPubTitle">Go publisher</h3>
+          <p data-i18n="stepPubBody">Multi-session store with TTL janitor. Collapses many agents into one active_state.</p>
+        </li>
+        <li>
+          <h3 data-i18n="stepMqttTitle">MQTT + Home Assistant</h3>
+          <p data-i18n="stepMqttBody">QoS 1 retained topics, LWT availability, and MQTT discovery sensors.</p>
+        </li>
+        <li>
+          <h3 data-i18n="stepMcuTitle">ESP32 scanner</h3>
+          <p data-i18n="stepMcuBody">Rust firmware on C3 or S2 drives an 8-LED WS2812B bar in classic red or colorful themes.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="section" id="links">
+      <h2 class="section__title" data-i18n="linksTitle">Get the bits</h2>
+      <p class="section__body" data-i18n="linksBody">
+        Source, printable mount, and the live architecture viewer.
+      </p>
+      <div class="links-strip">
+        <a class="link-tile" href="https://github.com/suapapa/kitt-eye" target="_blank" rel="noopener noreferrer">
+          <strong data-i18n="tileGithub">GitHub Repo</strong>
+          <span>github.com/suapapa/kitt-eye</span>
+        </a>
+        <a class="link-tile" href="https://www.thingiverse.com/thing:7417369" target="_blank" rel="noopener noreferrer">
+          <strong data-i18n="tileThingiverse">Thingiverse</strong>
+          <span>thing:7417369</span>
+        </a>
+        <a class="link-tile" href="./architecture.html">
+          <strong data-i18n="tileArch">Architecture</strong>
+          <span data-i18n="tileArchSpan">Interactive diagram</span>
+        </a>
+        <a class="link-tile" href="https://youtu.be/wyhWsYbmHZ8" target="_blank" rel="noopener noreferrer">
+          <strong data-i18n="tileDemo">Demo video</strong>
+          <span>youtu.be/wyhWsYbmHZ8</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footerCopy">kitt-eye - open source homelab agent monitor</p>
+      <p>
+        <a href="https://github.com/suapapa/kitt-eye" target="_blank" rel="noopener noreferrer">GitHub</a>
+        ·
+        <a href="https://www.thingiverse.com/thing:7417369" target="_blank" rel="noopener noreferrer">Thingiverse</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
